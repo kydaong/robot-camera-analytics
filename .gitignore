@@ -1,0 +1,169 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# FastAPI / Uvicorn
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Azure SQL / ODBC
+*.dsn
+
+# Qdrant
+qdrant_data/
+.qdrant/
+
+# Images and uploads
+/images/*
+/app/images/*
+!/app/images/.gitkeep
+/uploads/*
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+# Exception: keep test images
+!test_image.jpg
+!sample_*.jpg
+
+# Outputs and temp files
+/outputs/*
+/temp/*
+/tmp/*
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+.pyre/
+
+# PyType
+.pytype/
+
+# Alembic (database migrations)
+# Keep migration files but ignore auto-generated
+# alembic/versions/*.py
+# !alembic/versions/
+# Uncomment above if you want to track migrations
+
+# Documentation builds
+docs/_build/
+site/
+
+# Distribution / packaging
+*.whl
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Backup files
+*.backup
+*.orig
+
+# Compiled files
+*.pyc
+*.pyo
+*.pyd
+
+# Cache
+.cache/
+*.cache
+
+# Secrets and credentials
+secrets.json
+credentials.json
+*.pem
+*.key
+*.cert
+
+# LangChain / LangGraph cache
+.langchain_cache/
+
+# Project specific
+/mnt/user-data/uploads/*
+/mnt/user-data/outputs/*
+
+# Keep directory structure
+!**/.gitkeep
