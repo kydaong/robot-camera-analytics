@@ -1,24 +1,26 @@
 """
 Vector embedding and semantic search via Qdrant.
+Uses sentence-transformers (all-MiniLM-L6-v2, 384-dim) for local embeddings.
 """
+from functools import lru_cache
 from typing import Any
 from uuid import uuid4
 
-import anthropic
 from qdrant_client.models import PointStruct, Filter, FieldCondition, MatchValue
 
 from app.config import settings
 from app.core.vector_store import get_qdrant_client
 
-_anthropic = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+@lru_cache(maxsize=1)
+def _get_model():
+    from sentence_transformers import SentenceTransformer
+    return SentenceTransformer(settings.EMBEDDING_MODEL)
 
 
 def embed_text(text: str) -> list[float]:
-    """Generate an embedding using Claude-compatible approach via voyage or similar.
-    Placeholder: replace with your chosen embedding model call.
-    """
-    # TODO: swap for actual embedding model (e.g. voyage-3, text-embedding-3-small)
-    raise NotImplementedError("Configure your embedding provider in vector_service.py")
+    model = _get_model()
+    return model.encode(text, normalize_embeddings=True).tolist()
 
 
 def upsert_document(

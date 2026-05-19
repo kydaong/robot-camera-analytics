@@ -1,8 +1,8 @@
 """
-Ingest Singapore engineering standards (SS, CP, TR, API) into Qdrant using hybrid chunking.
+Ingest OEM equipment manuals into Qdrant using hybrid chunking.
 
 Usage:
-    python scripts/ingest_standards.py --dir ./data/standards
+    python scripts/ingest_manuals.py --dir ./data/manuals
 """
 import argparse
 import sys
@@ -31,21 +31,21 @@ def ingest_pdf(pdf_path: Path) -> int:
 
     for chunk in chunks:
         upsert_document(
-            collection=settings.QDRANT_COLLECTION_STANDARDS,
+            collection=settings.QDRANT_COLLECTION_MANUALS,
             text=chunk["text"],
             metadata={
                 "source": pdf_path.name,
                 "section": chunk["section"],
                 "chunk_index": chunk["chunk_index"],
-                "document_type": "singapore_standard",
+                "document_type": "oem_manual",
             },
         )
     return len(chunks)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Ingest Singapore standards into Qdrant")
-    parser.add_argument("--dir", required=True, help="Folder containing standard PDFs")
+    parser = argparse.ArgumentParser(description="Ingest OEM manuals into Qdrant")
+    parser.add_argument("--dir", required=True, help="Folder containing manual PDFs")
     args = parser.parse_args()
 
     ensure_collections()
@@ -60,7 +60,7 @@ def main():
         n = ingest_pdf(pdf)
         print(f"{n} chunks")
         total += n
-    print(f"\nDone — {total} chunks across {len(pdfs)} standards.")
+    print(f"\nDone — {total} chunks across {len(pdfs)} manuals.")
 
 
 if __name__ == "__main__":

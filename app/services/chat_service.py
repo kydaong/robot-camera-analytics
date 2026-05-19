@@ -18,7 +18,7 @@ CHAT_SYSTEM_PROMPT = """You are an AI coworker assistant for facilities and main
 You have access to the CMMS database, past work orders, Singapore engineering standards,
 and OEM equipment manuals. Answer questions clearly and cite sources where possible.
 Always use the available tools to look up live data — do not make up figures.
-When referencing standards, quote the clause number if available."""
+When referencing standards and manuals, quote the clause number if available."""
 
 
 def run_chat(request: ChatRequest, db: Session) -> ChatResponse:

@@ -3,7 +3,7 @@ Main FastAPI application
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1 import chat, inspection, workflow
+from app.api.v1 import chat, inspection, workflow, xmpro
 from app.config import settings
 from app.core.database import create_tables
 from app.core.vector_store import ensure_collections
@@ -33,6 +33,7 @@ API_PREFIX = "/api/v1"
 app.include_router(chat.router, prefix=API_PREFIX)
 app.include_router(inspection.router, prefix=API_PREFIX)
 app.include_router(workflow.router, prefix=API_PREFIX)
+app.include_router(xmpro.router, prefix=API_PREFIX)
 
 
 @app.on_event("startup")

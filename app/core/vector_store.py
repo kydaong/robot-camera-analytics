@@ -8,15 +8,17 @@ from qdrant_client.models import Distance, VectorParams
 
 from app.config import settings
 
-VECTOR_SIZE = 1536  # text-embedding-3-small / OpenAI compatible
-
-
 @lru_cache(maxsize=1)
 def get_qdrant_client() -> QdrantClient:
     return QdrantClient(
-        url=settings.QDRANT_URL,
+        host=settings.QDRANT_HOST,
+        port=settings.QDRANT_PORT,
         api_key=settings.QDRANT_API_KEY,
     )
+
+
+def _vector_size() -> int:
+    return settings.EMBEDDING_DIM
 
 
 def ensure_collections() -> None:
@@ -32,5 +34,5 @@ def ensure_collections() -> None:
         if name not in existing:
             client.create_collection(
                 collection_name=name,
-                vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
+                vectors_config=VectorParams(size=_vector_size(), distance=Distance.COSINE),
             )

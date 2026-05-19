@@ -15,7 +15,7 @@ class Base(DeclarativeBase):
 
 
 class WorkOrder(Base):
-    __tablename__ = "work_orders"
+    __tablename__ = "spot_work_orders"
 
     id = Column(Integer, primary_key=True, index=True)
     work_order_number = Column(String(50), unique=True, index=True, nullable=False)
@@ -38,7 +38,7 @@ class WorkOrder(Base):
 
 
 class Asset(Base):
-    __tablename__ = "assets"
+    __tablename__ = "spot_assets"
 
     id = Column(Integer, primary_key=True, index=True)
     asset_id = Column(String(100), unique=True, index=True, nullable=False)
@@ -56,7 +56,7 @@ class Asset(Base):
 
 
 class InspectionRun(Base):
-    __tablename__ = "inspection_runs"
+    __tablename__ = "spot_inspection_runs"
 
     id = Column(Integer, primary_key=True, index=True)
     run_id = Column(String(36), unique=True, index=True, nullable=False)
@@ -74,11 +74,11 @@ class InspectionRun(Base):
 
 
 class WorkflowItem(Base):
-    __tablename__ = "workflow_items"
+    __tablename__ = "spot_workflow_items"
 
     id = Column(Integer, primary_key=True, index=True)
     workflow_item_id = Column(String(36), unique=True, index=True, nullable=False)
-    run_id = Column(String(36), ForeignKey("inspection_runs.run_id"), nullable=False)
+    run_id = Column(String(36), ForeignKey("spot_inspection_runs.run_id"), nullable=False)
     action_payload = Column(JSON, nullable=False)  # ProposedAction JSON
     status = Column(String(30), default="pending_review")
     created_at = Column(DateTime, default=datetime.utcnow)

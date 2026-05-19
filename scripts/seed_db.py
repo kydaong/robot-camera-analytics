@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.core.database import SessionLocal, create_tables
-from app.models.db_models import Asset, WorkOrder
+from app.models.db_models import Asset, WorkOrder   
 
 
 SITE = "Choa Chu Kang Waterworks"
@@ -275,7 +275,7 @@ WORK_ORDERS = [
 
     # ── Open / In Progress ─────────────────────────────────────────────────
     {
-        "work_order_number": "WO-2025-001",
+        "work_order_number": "WO-2026-001",
         "title": "Abnormal vibration – PMP-FILT-001",
         "asset_id": "PMP-FILT-001", "site": SITE, "zone": "Filtration Building",
         "status": "in_progress", "priority": "high",
@@ -285,7 +285,7 @@ WORK_ORDERS = [
         "notes": "Vibration readings at 12 mm/s (threshold 7 mm/s). Bearing inspection underway. Possible impeller imbalance.",
     },
     {
-        "work_order_number": "WO-2025-002",
+        "work_order_number": "WO-2026-002",
         "title": "Routine PM – PMP-RAW-002 quarterly service",
         "asset_id": "PMP-RAW-002", "site": SITE, "zone": "Intake Structure",
         "status": "open", "priority": "medium",
@@ -295,7 +295,7 @@ WORK_ORDERS = [
         "notes": "Scheduled quarterly PM. Check impeller clearance, grease bearings, inspect mechanical seal.",
     },
     {
-        "work_order_number": "WO-2025-003",
+        "work_order_number": "WO-2026-003",
         "title": "External coating degradation – PIPE-RAW-001",
         "asset_id": "PIPE-RAW-001", "site": SITE, "zone": "Intake to Mixing Basin",
         "status": "open", "priority": "medium",
@@ -305,7 +305,7 @@ WORK_ORDERS = [
         "notes": "Spot inspection by Spot robot detected blistering and delamination of external epoxy coating over 3 m section. Recoating required.",
     },
     {
-        "work_order_number": "WO-2025-004",
+        "work_order_number": "WO-2026-004",
         "title": "Check valve chatter – VLV-CHECK-001",
         "asset_id": "VLV-CHECK-001", "site": SITE, "zone": "Intake Structure",
         "status": "open", "priority": "high",
@@ -314,6 +314,16 @@ WORK_ORDERS = [
         "estimated_hours": 5.0, "actual_hours": None, "cost": None,
         "notes": "Audible chatter under low-flow conditions. Likely worn hinge pin. Isolation and inspection scheduled.",
     },
+    {
+        "work_order_number": "WO-2026-005",
+        "title": "Filter backwash pump performance degradation – PMP-BACKWASH-001",
+        "asset_id": "PMP-BACKWASH-001", "site": SITE, "zone": "Filtration Building",
+        "status": "in_progress", "priority": "high",
+        "assigned_to": "Ahmad Fadzillah",
+        "failure_code": "PERFORMANCE",
+        "estimated_hours": 8.0, "actual_hours": None, "cost": None,
+        "notes": "Flow rate dropped by 15% at same speed setting. Possible wear ring or impeller damage.Performance testing underway.",
+    }
 ]
 
 

@@ -27,6 +27,9 @@ aiofiles==24.1.0
 python-dotenv==1.0.1
 httpx==0.28.1
 
+# Embeddings (local, no API key needed)
+sentence-transformers==3.3.1
+
 # Dev / test
 pytest==8.3.4
 pytest-asyncio==0.24.0
