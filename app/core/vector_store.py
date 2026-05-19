@@ -10,10 +10,12 @@ from app.config import settings
 
 @lru_cache(maxsize=1)
 def get_qdrant_client() -> QdrantClient:
+    is_local = settings.QDRANT_HOST in ("localhost", "127.0.0.1")
     return QdrantClient(
         host=settings.QDRANT_HOST,
         port=settings.QDRANT_PORT,
         api_key=settings.QDRANT_API_KEY,
+        https=not is_local,   # local Qdrant runs plain HTTP, no TLS
     )
 
 

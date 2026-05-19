@@ -27,16 +27,22 @@ def upsert_document(
     collection: str,
     text: str,
     metadata: dict[str, Any],
-    doc_id: str | None = None,
+    doc_id: str | int | None = None,
 ) -> str:
     client = get_qdrant_client()
     vector = embed_text(text)
-    point_id = doc_id or str(uuid4())
+    # Qdrant accepts unsigned integers or proper UUID strings only
+    if isinstance(doc_id, int):
+        point_id: str | int = doc_id
+    elif isinstance(doc_id, str) and doc_id.isdigit():
+        point_id = int(doc_id)
+    else:
+        point_id = doc_id or str(uuid4())
     client.upsert(
         collection_name=collection,
         points=[PointStruct(id=point_id, vector=vector, payload={"text": text, **metadata})],
     )
-    return point_id
+    return str(point_id)
 
 
 def semantic_search(
