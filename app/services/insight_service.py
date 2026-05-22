@@ -16,11 +16,18 @@ _client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 INSIGHT_SYSTEM_PROMPT = """You are an AI inspection analyst for industrial assets in Singapore.
 You receive structured observations from a Spot robot camera inspection.
-Your job is to:
+
+STRICT RULES:
+- Only reference standards that appear VERBATIM in the <standards_context> block below.
+- If no standards context is provided, set applicable_standards to [] and reference_standard to null.
+- Do NOT use your training knowledge to invent or recall standards not in the context.
+- Do NOT hallucinate standard numbers, clauses, or titles.
+
+Your job:
 1. Summarise the overall situation in 2-3 sentences
 2. Propose concrete, prioritised maintenance actions (priority 1 = most urgent)
-3. Reference applicable Singapore Standards (SS, CP, TR series) where relevant
-4. Flag if any actions require immediate shutdown or permit-to-work
+3. Flag if any actions require immediate shutdown or permit-to-work
+4. Only cite standards explicitly found in the provided context
 
 Return ONLY valid JSON matching the schema provided. No prose outside the JSON."""
 
@@ -32,6 +39,17 @@ def _highest_severity(observations: list[Observation]) -> SeverityLevel:
         if level in severities:
             return level
     return SeverityLevel.low
+
+
+def _extract_standard_refs(standards: list[dict]) -> list[str]:
+    """Pull source filenames as the ground-truth standard references."""
+    seen, refs = set(), []
+    for s in standards:
+        src = s.get("source", "")
+        if src and src not in seen:
+            seen.add(src)
+            refs.append(src.replace(".pdf", "").replace("_", " "))
+    return refs
 
 
 def generate_insight(
@@ -47,15 +65,22 @@ def generate_insight(
     past_incidents = get_incidents_context(query)
     standards = get_standards_context(query)
 
-    context_block = ""
-    if past_incidents:
-        context_block += "Past similar incidents:\n" + "\n".join(
-            f"- {i.get('text', '')}" for i in past_incidents[:3]
-        ) + "\n\n"
+    # Build grounded context blocks — these are the ONLY sources Claude may cite
+    standards_block = ""
     if standards:
-        context_block += "Relevant standards:\n" + "\n".join(
-            f"- {s.get('text', '')}" for s in standards[:3]
+        standards_block = "\n".join(
+            f"[{s.get('source', 'unknown')} | section: {s.get('section', '')}]\n{s.get('text', '')}"
+            for s in standards[:5]
         )
+
+    incidents_block = ""
+    if past_incidents:
+        incidents_block = "\n".join(
+            f"- {i.get('text', '')}" for i in past_incidents[:3]
+        )
+
+    # Ground-truth standard names for post-processing validation
+    grounded_standards = _extract_standard_refs(standards)
 
     user_prompt = f"""Inspection run: {request.run_id}
 Location: {request.location.site_name} / {request.location.zone}
@@ -65,22 +90,28 @@ Robot: {request.robot_id}
 Observations:
 {observation_text}
 
-{context_block}
+<standards_context>
+{standards_block if standards_block else "No standards retrieved — do not cite any standards."}
+</standards_context>
 
-Return JSON with:
+<past_incidents_context>
+{incidents_block if incidents_block else "No similar past incidents found."}
+</past_incidents_context>
+
+Return JSON exactly matching this schema:
 {{
-  "summary": "...",
+  "summary": "2-3 sentence situation summary",
   "proposed_actions": [
     {{
-      "description": "...",
-      "priority": 1-5,
-      "estimated_duration_hours": 0.5,
+      "description": "specific action description",
+      "priority": 1,
+      "estimated_duration_hours": 2.0,
       "requires_shutdown": false,
-      "reference_standard": "SS XXX:YYYY clause N.N or null"
+      "reference_standard": "exact source name from standards_context above, or null"
     }}
   ],
-  "similar_past_incidents": ["...", "..."],
-  "applicable_standards": ["SS XXX:YYYY", "..."]
+  "similar_past_incidents": ["work order reference if found in past_incidents_context, else empty list"],
+  "applicable_standards": ["exact source names from standards_context only, or empty list"]
 }}"""
 
     response = _client.messages.create(
@@ -97,13 +128,23 @@ Return JSON with:
             raw = raw[4:]
     data = json.loads(raw.strip())
 
+    # Validate: strip any cited standard not in our grounded list
+    cited = data.get("applicable_standards", [])
+    if grounded_standards:
+        validated_standards = [s for s in cited if any(
+            g.lower() in s.lower() or s.lower() in g.lower()
+            for g in grounded_standards
+        )]
+    else:
+        validated_standards = []
+
     proposed_actions = [
         ProposedAction(
             description=a["description"],
-            priority=a["priority"],
+            priority=max(1, min(5, int(a.get("priority", 3)))),
             estimated_duration_hours=a.get("estimated_duration_hours"),
             requires_shutdown=a.get("requires_shutdown", False),
-            reference_standard=a.get("reference_standard"),
+            reference_standard=a.get("reference_standard") if grounded_standards else None,
         )
         for a in data.get("proposed_actions", [])
     ]
@@ -118,5 +159,5 @@ Return JSON with:
         summary=data.get("summary", ""),
         proposed_actions=proposed_actions,
         similar_past_incidents=data.get("similar_past_incidents", []),
-        applicable_standards=data.get("applicable_standards", []),
+        applicable_standards=validated_standards,
     )

@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Spot Robot Inspection</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#1a1a1a;
+  --surface:#242424;
+  --surface2:#2c2c2c;
+  --surface3:#333;
+  --border:#3a3a3a;
+  --border2:#444;
+  --text:#e8e8e8;
+  --text2:#aaa;
+  --text3:#666;
+  --accent:#29b6f6;
+  --accent-dim:rgba(41,182,246,0.12);
+  --green:#66bb6a;
+  --green-dim:rgba(102,187,106,0.12);
+  --yellow:#ffca28;
+  --yellow-dim:rgba(255,202,40,0.12);
+  --orange:#ffa726;
+  --orange-dim:rgba(255,167,38,0.12);
+  --red:#ef5350;
+  --red-dim:rgba(239,83,80,0.12);
+  --purple:#ab47bc;
+  --purple-dim:rgba(171,71,188,0.12);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;overflow:hidden}
+
+/* ── Layout ── */
+.app{display:flex;flex-direction:column;height:100%}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 12px;height:38px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.topbar-title{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;color:var(--text)}
+.topbar-icon{width:22px;height:22px;border-radius:5px;background:var(--accent-dim);border:1px solid rgba(41,182,246,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.tabs{display:flex;align-items:center;padding:0 8px;height:34px;background:var(--surface);border-bottom:1px solid var(--border);gap:2px;flex-shrink:0;overflow-x:auto}
+.tabs::-webkit-scrollbar{height:0}
+.tab{padding:0 12px;height:28px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text2);border:none;background:none;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:background .15s,color .15s}
+.tab:hover{background:var(--surface2);color:var(--text)}
+.tab.active{background:var(--accent-dim);color:var(--accent);border-bottom:2px solid var(--accent)}
+.tab-badge{background:var(--red);color:#fff;border-radius:8px;font-size:9px;font-weight:700;padding:1px 5px;min-width:14px;text-align:center}
+.content{flex:1;overflow-y:auto;padding:10px 12px}
+.content::-webkit-scrollbar{width:5px}
+.content::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
+
+/* ── AI Panel ── */
+.ai-overlay{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);z-index:100;animation:fadeIn .2s}
+@keyframes fadeIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.ai-header{display:flex;align-items:center;justify-content:space-between;padding:0 12px;height:38px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.ai-messages{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.ai-messages::-webkit-scrollbar{width:5px}
+.ai-messages::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
+.msg-user{align-self:flex-end;background:var(--accent-dim);border:1px solid rgba(41,182,246,0.2);border-radius:10px 10px 3px 10px;padding:8px 11px;max-width:82%;line-height:1.45;color:var(--text)}
+.msg-ai{align-self:flex-start;background:var(--surface2);border:1px solid var(--border);border-radius:3px 10px 10px 10px;padding:8px 11px;max-width:88%;line-height:1.5;color:var(--text)}
+.msg-ai-label{font-size:10px;font-weight:600;color:var(--purple);margin-bottom:6px;display:flex;align-items:center;gap:4px}
+.md h1,.md h2,.md h3{font-size:12px;font-weight:700;color:var(--text);margin:8px 0 4px}
+.md h3{color:var(--accent)}
+.md p{margin:4px 0;line-height:1.55}
+.md ul,.md ol{margin:4px 0 4px 14px;line-height:1.55}
+.md li{margin:2px 0}
+.md strong{color:var(--text);font-weight:600}
+.md code{font-family:'Courier New',monospace;font-size:11px;background:var(--surface3);padding:1px 5px;border-radius:3px;color:var(--yellow)}
+.md pre{background:var(--surface3);border:1px solid var(--border);border-radius:4px;padding:8px;margin:6px 0;overflow-x:auto}
+.md pre code{background:none;padding:0;color:var(--text2)}
+.md table{width:100%;margin:6px 0;border-collapse:collapse;font-size:11px}
+.md th{text-align:left;padding:5px 8px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border2);background:var(--surface3)}
+.md td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text2)}
+.md tr:hover td{background:rgba(255,255,255,.02)}
+.md hr{border:none;border-top:1px solid var(--border);margin:8px 0}
+.md blockquote{border-left:3px solid var(--accent);padding:4px 10px;margin:6px 0;color:var(--text2);background:var(--accent-dim);border-radius:0 4px 4px 0}
+.ai-input-row{padding:8px 12px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
+
+/* ── Cards & Widgets ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:6px}
+.section-title{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.stat-grid{display:grid;gap:8px;margin-bottom:10px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px}
+.stat-val{font-size:22px;font-weight:700;color:var(--text);line-height:1}
+.stat-label{font-size:11px;color:var(--text2);margin-top:3px}
+.stat-sub{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* ── Severity / Status badges ── */
+.badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:.04em}
+.sev-critical{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,83,80,.25)}
+.sev-high{background:var(--orange-dim);color:var(--orange);border:1px solid rgba(255,167,38,.25)}
+.sev-medium{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(255,202,40,.25)}
+.sev-low{background:var(--green-dim);color:var(--green);border:1px solid rgba(102,187,106,.25)}
+.sev-none{background:rgba(100,100,100,.1);color:var(--text3);border:1px solid rgba(100,100,100,.2)}
+.st-pending_review{background:var(--yellow-dim);color:var(--yellow)}
+.st-approved{background:var(--green-dim);color:var(--green)}
+.st-rejected{background:var(--red-dim);color:var(--red)}
+.st-completed{background:var(--accent-dim);color:var(--accent)}
+.st-in_progress{background:var(--purple-dim);color:var(--purple)}
+
+/* ── Buttons ── */
+.btn{border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;padding:5px 12px;transition:filter .15s;display:inline-flex;align-items:center;gap:5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-accent{background:var(--accent);color:#0d1b22}
+.btn-accent:hover:not(:disabled){filter:brightness(1.1)}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--surface3)}
+.btn-ok{background:var(--green-dim);color:var(--green);border:1px solid rgba(102,187,106,.25)}
+.btn-ok:hover{background:rgba(102,187,106,.22)}
+.btn-err{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,83,80,.25)}
+.btn-err:hover{background:rgba(239,83,80,.22)}
+.btn-sm{padding:3px 9px;font-size:11px}
+
+/* ── Form inputs ── */
+.inp{background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;padding:5px 9px;width:100%;outline:none;font-family:inherit;transition:border-color .15s}
+.inp:focus{border-color:var(--accent)}
+.inp::placeholder{color:var(--text3)}
+.inp-row{margin-bottom:8px}
+.inp-label{font-size:11px;color:var(--text2);margin-bottom:3px;display:block}
+.inp-grid{display:grid;gap:8px}
+
+/* ── Table ── */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:6px 8px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text2);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.015)}
+
+/* ── Approval card ── */
+.approval-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px}
+.approval-card.shutdown{border-color:rgba(239,83,80,.35)}
+
+/* ── Patrol result ── */
+.result-box{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px}
+.metric-row{display:grid;gap:6px;margin:8px 0}
+.metric-mini{background:var(--surface2);border-radius:4px;padding:7px 10px;text-align:center}
+.metric-mini .val{font-size:18px;font-weight:700;color:var(--text)}
+.metric-mini .lbl{font-size:10px;color:var(--text3)}
+
+/* ── Progress bar ── */
+.prog-bar{background:var(--surface2);border-radius:10px;height:5px;overflow:hidden}
+.prog-fill{height:100%;border-radius:10px;background:var(--accent);transition:width .4s}
+
+/* ── Modal ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:18px 20px;width:340px;max-width:95%}
+.modal h3{font-size:13px;font-weight:600;margin-bottom:10px}
+
+/* ── Misc ── */
+.empty-state{text-align:center;padding:28px 12px;color:var(--text3)}
+.empty-state svg{display:block;margin:0 auto 8px}
+.spinner{border:2px solid var(--surface3);border-top-color:var(--accent);border-radius:50%;width:16px;height:16px;animation:spin .7s linear infinite;display:inline-block;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-center{display:flex;align-items:center;justify-content:center;padding:40px;gap:8px;color:var(--text3);font-size:12px}
+.divider{height:1px;background:var(--border);margin:10px 0}
+.mono{font-family:'Courier New',monospace;font-size:11px}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flex{display:flex}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-6{gap:6px}.gap-8{gap:8px}.gap-10{gap:10px}
+.text-accent{color:var(--accent)}.text-green{color:var(--green)}.text-red{color:var(--red)}.text-muted{color:var(--text3)}.text-sub{color:var(--text2)}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:12px;right:12px;z-index:999;border-radius:5px;padding:9px 14px;font-size:12px;font-weight:500;animation:slideUp .25s ease;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+@keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+.toast-ok{background:#0a2010;border:1px solid rgba(102,187,106,.35);color:var(--green)}
+.toast-err{background:#200a0a;border:1px solid rgba(239,83,80,.35);color:var(--red)}
+.toast-info{background:#0a1620;border:1px solid rgba(41,182,246,.35);color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-title">
+      <div class="topbar-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#29b6f6" stroke-width="2.2">
+          <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>
+        </svg>
+      </div>
+      Spot Robot Inspection
+      <div class="live-dot"></div>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="ai-btn" onclick="toggleAI()" style="gap:5px">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      AI Coworker
+    </button>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs" id="tabs">
+    <button class="tab active" onclick="go('dashboard')">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </button>
+    <button class="tab" onclick="go('patrol')">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Submit Patrol
+    </button>
+    <button class="tab" onclick="go('approvals')" id="tab-approvals">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Approvals
+      <span class="tab-badge" id="approval-badge" style="display:none">0</span>
+    </button>
+    <button class="tab" onclick="go('status')">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Status
+    </button>
+    <button class="tab" onclick="go('history')">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12 8 12 12 14 14"/><path d="M3.1 11a9 9 0 1 0 .4-3.5"/><polyline points="3 3 3 9 9 9"/></svg>
+      History
+    </button>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="content" id="content"></div>
+
+  <!-- AI OVERLAY (hidden by default) -->
+  <div class="ai-overlay" id="ai-overlay" style="display:none">
+    <div class="ai-header">
+      <div class="flex items-center gap-8">
+        <div style="width:22px;height:22px;border-radius:5px;background:var(--purple-dim);border:1px solid rgba(171,71,188,.25);display:flex;align-items:center;justify-content:center">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ab47bc" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:600">AI Coworker <span style="font-size:10px;color:var(--text3);font-weight:400">— Mode 1</span></div>
+          <div style="font-size:10px;color:var(--text3)">CMMS · Work Orders · SS Standards · OEM Manuals</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="toggleAI()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Close
+      </button>
+    </div>
+    <div class="ai-messages" id="ai-messages">
+      <div class="msg-ai">
+        <div class="msg-ai-label">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          AI Coworker
+        </div>
+        Hello! Ask me about work orders, asset history, maintenance standards, or past inspection findings at Choa Chu Kang Waterworks.
+      </div>
+    </div>
+    <div class="ai-input-row">
+      <input id="chat-inp" class="inp" placeholder="Ask about assets, work orders, SS standards…" onkeydown="if(event.key==='Enter')sendChat()" style="flex:1"/>
+      <button class="btn btn-accent" onclick="sendChat()" id="chat-send-btn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.88);align-items:center;justify-content:center;flex-direction:column" onclick="closeLightbox()">
+  <div style="position:absolute;top:14px;right:18px;color:#aaa;font-size:11px;cursor:pointer" onclick="closeLightbox()">✕ Close</div>
+  <img id="lightbox-img" src="" style="max-width:90vw;max-height:82vh;border-radius:8px;box-shadow:0 8px 48px rgba(0,0,0,.7);object-fit:contain" onclick="event.stopPropagation()"/>
+  <div id="lightbox-caption" style="margin-top:10px;font-size:11px;color:#888;max-width:80vw;text-align:center"></div>
+</div>
+
+<!-- APPROVE MODAL -->
+<div class="modal-bg" id="modal" style="display:none">
+  <div class="modal">
+    <h3 id="modal-title">Review Action</h3>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.4" id="modal-desc"></div>
+    <div class="inp-row">
+      <label class="inp-label">Reviewer ID *</label>
+      <input class="inp" id="reviewer-id" placeholder="e.g. ENG-001"/>
+    </div>
+    <div class="inp-row">
+      <label class="inp-label">Notes (optional)</label>
+      <textarea class="inp" id="reviewer-notes" rows="2" placeholder="Remarks…" style="resize:none"></textarea>
+    </div>
+    <div class="flex gap-8" style="margin-top:12px">
+      <button class="btn btn-ok flex-1" onclick="doApproval(true)">✓ Approve</button>
+      <button class="btn btn-err flex-1" onclick="doApproval(false)">✕ Reject</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- COMPLETE MODAL -->
+<div class="modal-bg" id="modal-complete" style="display:none">
+  <div class="modal" style="width:300px">
+    <h3>Mark as Completed</h3>
+    <div style="font-size:12px;color:var(--text2);margin:8px 0 14px;line-height:1.4" id="complete-desc"></div>
+    <div class="flex gap-8">
+      <button class="btn btn-accent flex-1" onclick="doComplete()">Confirm Complete</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-complete').style.display='none'">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin + '/api/v1';
+let _currentSection = 'dashboard';
+let _lastPatrolResult = (() => { try { const s=localStorage.getItem('lastPatrolResult'); return s?JSON.parse(s):null; } catch(e){ return null; } })();
+let _approvalItemId = null;
+let _completeItemId = null;
+let _chatLoading = false;
+let _historyData = [];
+let _aiOpen = false;
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+
+const esc = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const escJ = s => String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+const fmt = d => d ? new Date(d).toLocaleString('en-SG',{dateStyle:'short',timeStyle:'short'}) : '—';
+
+function sevBadge(s){
+  const m={critical:'sev-critical',high:'sev-high',medium:'sev-medium',low:'sev-low',none:'sev-none'};
+  return `<span class="badge ${m[s]||'sev-none'}">${(s||'NONE').toUpperCase()}</span>`;
+}
+function stBadge(s){
+  return `<span class="badge st-${s}" style="font-size:9px">${(s||'').replace('_',' ').toUpperCase()}</span>`;
+}
+function sevColor(s){return{critical:'var(--red)',high:'var(--orange)',medium:'var(--yellow)',low:'var(--green)',none:'var(--text3)'}[s]||'var(--text3)'}
+
+function toast(msg,type='info'){
+  const t=document.createElement('div');
+  t.className=`toast toast-${type==='success'?'ok':type==='error'?'err':'info'}`;
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+
+// ── Navigation ──────────────────────────────────────────────────────────────
+
+function go(name){
+  _currentSection=name;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const idx={dashboard:0,patrol:1,approvals:2,status:3,history:4}[name];
+  document.querySelectorAll('.tab')[idx]?.classList.add('active');
+  ({dashboard:renderDashboard,patrol:renderPatrol,approvals:renderApprovals,status:renderStatus,history:renderHistory})[name]?.();
+}
+
+function toggleAI(){
+  _aiOpen=!_aiOpen;
+  const ov=document.getElementById('ai-overlay');
+  const btn=document.getElementById('ai-btn');
+  ov.style.display=_aiOpen?'flex':'none';
+  if(_aiOpen){ov.style.flexDirection='column';btn.style.background='var(--purple-dim)';btn.style.color='var(--purple)';btn.style.borderColor='rgba(171,71,188,.35)';}
+  else{btn.style.background='';btn.style.color='';btn.style.borderColor='';}
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────────────
+
+async function renderDashboard(){
+  show(`<div class="loading-center"><div class="spinner"></div> Loading…</div>`);
+  let pending=[],history=[];
+  try{[pending,history]=await Promise.all([apiFetch('/xmpro/approvals/pending'),apiFetch('/xmpro/history?limit=30')]);}
+  catch(e){toast('Failed to load dashboard','error');}
+
+  updateBadge(pending.length);
+  const critical=history.filter(h=>h.overall_severity==='critical').length;
+  const lastSev=history[0]?.overall_severity||'none';
+
+  show(`
+    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
+      ${mini(pending.length,'Pending',pending.length>0?'var(--yellow)':'var(--green)',pending.length>0?'Needs attention':'All cleared')}
+      ${mini(history.length,'Total Patrols','var(--accent)',history[0]?fmt(history[0].captured_at):'No runs yet')}
+      ${mini(critical,'Critical Findings','var(--red)','Across all runs')}
+      ${mini(lastSev.toUpperCase(),'Last Severity',sevColor(lastSev),history[0]?fmt(history[0].captured_at):'—')}
+    </div>
+
+    ${pending.length>0?`
+    <div style="margin-bottom:10px">
+      <div class="flex justify-between items-center" style="margin-bottom:6px">
+        <div class="section-title" style="margin:0">⚠ Awaiting Approval</div>
+        <button class="btn btn-ghost btn-sm" onclick="go('approvals')">View all →</button>
+      </div>
+      ${pending.slice(0,3).map(p=>`
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:5px;display:flex;align-items:center;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div class="truncate" style="font-size:12px;color:var(--text)">${esc(p.action_description)}</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">${esc(p.site_name)} · ${esc(p.zone)} · P${p.priority}</div>
+          </div>
+          ${sevBadge(p.severity)}
+          <button class="btn btn-ok btn-sm" onclick="openModal('${p.workflow_item_id}','${escJ(p.action_description)}')">Review</button>
+        </div>`).join('')}
+      ${pending.length>3?`<div style="font-size:10px;color:var(--text3);text-align:center">+${pending.length-3} more</div>`:''}
+    </div>`:`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:8px 10px;display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="color:var(--green)">✓</div>
+      <div style="font-size:12px;color:var(--text2)">No pending approvals — all inspection actions reviewed.</div>
+    </div>`}
+
+    <div class="section-title">Recent Patrols</div>
+    ${history.length===0?`<div class="empty-state" style="padding:16px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>No patrols yet</div>`:`
+    <div class="card" style="overflow:hidden">
+    <table>
+      <thead><tr><th>Run ID</th><th>Location</th><th>Severity</th><th>Progress</th><th>Time</th><th></th></tr></thead>
+      <tbody>
+        ${history.slice(0,5).map(r=>`<tr>
+          <td class="mono text-accent" style="cursor:pointer" onclick="lookupRun('${r.run_id}')">${r.run_id.slice(0,8)}…</td>
+          <td style="font-size:11px">${esc(r.site_name)||'—'}<span class="text-muted"> / </span>${esc(r.zone)||'—'}</td>
+          <td>${sevBadge(r.overall_severity)}</td>
+          <td style="min-width:80px">
+            <div class="prog-bar"><div class="prog-fill" style="width:${r.total_actions>0?Math.round(r.completed_actions/r.total_actions*100):0}%"></div></div>
+            <div style="font-size:9px;color:var(--text3);margin-top:2px">${r.completed_actions}/${r.total_actions}</div>
+          </td>
+          <td style="font-size:10px;color:var(--text3);white-space:nowrap">${fmt(r.captured_at)}</td>
+          <td><button class="btn btn-ghost btn-sm" onclick="lookupRun('${r.run_id}')">→</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`}
+  `);
+}
+
+function mini(val,label,color,sub){
+  return`<div class="stat-card"><div class="stat-val" style="color:${color};font-size:20px">${esc(val)}</div><div class="stat-label">${label}</div><div class="stat-sub">${sub||''}</div></div>`;
+}
+
+// ── Submit Patrol ──────────────────────────────────────────────────────────
+
+function renderPatrol(){
+  show(`
+    <div class="inp-grid" style="grid-template-columns:1fr 1fr">
+      <div>
+        <div class="section-title">Patrol Parameters</div>
+        <div class="card" style="padding:12px">
+          <div class="inp-row"><label class="inp-label">Work Order Number *</label><input class="inp" id="f-wo" placeholder="e.g. WO-2025-001"/></div>
+          <div class="inp-grid" style="grid-template-columns:1fr 1fr;margin-bottom:8px">
+            <div><label class="inp-label">Site *</label><input class="inp" id="f-site" value="Choa Chu Kang Waterworks"/></div>
+            <div><label class="inp-label">Zone *</label><input class="inp" id="f-zone" placeholder="Pump Station A"/></div>
+          </div>
+          <div class="inp-grid" style="grid-template-columns:1fr 1fr;margin-bottom:8px">
+            <div><label class="inp-label">Asset ID</label><input class="inp" id="f-asset" placeholder="PUMP-001"/></div>
+            <div><label class="inp-label">Robot ID</label><input class="inp" id="f-robot" value="spot-001"/></div>
+          </div>
+          <div class="inp-row">
+            <label class="inp-label">Patrol Type</label>
+            <select class="inp" id="f-type" style="cursor:pointer">
+              <option value="routine">Routine</option>
+              <option value="triggered">Triggered</option>
+              <option value="emergency">Emergency</option>
+            </select>
+          </div>
+          <div class="inp-row"><label class="inp-label">Notes</label><textarea class="inp" id="f-notes" rows="2" placeholder="Additional context…" style="resize:none"></textarea></div>
+          <div class="flex gap-8">
+            <button class="btn btn-accent" id="patrol-btn" onclick="doPatrol()" style="flex:1;justify-content:center">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              Deploy Patrol
+            </button>
+            <button class="btn btn-ghost" onclick="resetPatrolForm()" title="Reset fields">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.18-4.43"/></svg>
+              Reset
+            </button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="section-title">Result</div>
+        <div id="patrol-result" class="card" style="padding:14px;min-height:160px;display:flex;align-items:center;justify-content:center">
+          <div class="empty-state" style="padding:0">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Patrol result will appear here
+          </div>
+        </div>
+      </div>
+    </div>
+  `);
+  if(_lastPatrolResult) renderPatrolResult(_lastPatrolResult);
+}
+
+async function doPatrol(){
+  const wo=v('f-wo'),site=v('f-site'),zone=v('f-zone');
+  if(!wo||!site||!zone){toast('Work order, site, and zone are required','error');return;}
+  const btn=document.getElementById('patrol-btn');
+  btn.disabled=true;btn.innerHTML='<div class="spinner"></div> Deploying…';
+  const res=document.getElementById('patrol-result');
+  res.innerHTML='<div class="loading-center" style="flex-direction:column;gap:6px"><div class="spinner" style="width:22px;height:22px;border-width:3px"></div><span>Spot is inspecting…</span><span style="font-size:11px;color:var(--text3)">Analysing the images</span></div>';
+  try{
+    const data=await apiFetch('/xmpro/patrol',{method:'POST',body:{
+      work_order_number:wo,site_name:site,zone:zone,
+      asset_id:v('f-asset')||null,robot_id:v('f-robot')||'spot-001',
+      patrol_type:v('f-type'),notes:v('f-notes')||null
+    }});
+    _lastPatrolResult=data;
+    try{localStorage.setItem('lastPatrolResult',JSON.stringify(data));}catch(e){}
+    renderPatrolResult(data);
+    if(data.has_findings)toast(`${data.observation_count} finding(s) — ${data.action_count} action(s) awaiting approval`,'info');
+    else toast('Patrol complete — no anomalies','success');
+    updateBadge();
+  }catch(e){
+    res.innerHTML=`<div style="text-align:center;color:var(--red);font-size:12px">${esc(e.message)}</div>`;
+    toast('Patrol failed: '+e.message,'error');
+  }
+  btn.disabled=false;btn.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Deploy Patrol';
+}
+
+function resetPatrolForm(){
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val;};
+  set('f-wo','');
+  set('f-site','Choa Chu Kang Waterworks');
+  set('f-zone','');
+  set('f-asset','');
+  set('f-robot','spot-001');
+  set('f-type','routine');
+  set('f-notes','');
+  _lastPatrolResult=null;
+  try{localStorage.removeItem('lastPatrolResult');}catch(e){}
+  const res=document.getElementById('patrol-result');
+  if(res){
+    res.style.display='flex';
+    res.innerHTML='<div class="empty-state" style="padding:0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Patrol result will appear here</div>';
+  }
+  document.getElementById('f-wo')?.focus();
+}
+
+function renderPatrolResult(d){
+  const res=document.getElementById('patrol-result');
+  const sd=d.insight?.proposed_actions?.some(a=>a.requires_shutdown);
+  const obs=d.insight?.observations||[];
+
+  // Group observations by image filename
+  const byImg={};
+  obs.forEach(o=>{
+    if(!byImg[o.image_filename])byImg[o.image_filename]=[];
+    byImg[o.image_filename].push(o);
+  });
+  const imgNames=Object.keys(byImg);
+
+  const imgBase=window.location.origin+'/images/';
+
+  res.style.display='block';
+  res.innerHTML=`
+    <div class="flex items-center gap-8" style="margin-bottom:6px">
+      <div style="font-size:12px;font-weight:600;color:${d.has_findings?'var(--red)':'var(--green)'}">${d.has_findings?'⚠ Findings Detected':'✓ All Clear'}</div>
+      ${d.has_findings?sevBadge(d.overall_severity):''}
+    </div>
+    <div class="mono text-muted" style="margin-bottom:5px;font-size:10px">RUN: ${d.run_id}</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.5">${esc(d.summary)}</div>
+
+    <div class="metric-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:${imgNames.length?'10px':'8px'}">
+      <div class="metric-mini"><div class="val">${d.observation_count}</div><div class="lbl">Obs.</div></div>
+      <div class="metric-mini"><div class="val" style="color:${d.action_count>0?'var(--yellow)':'var(--text)'}">${d.action_count}</div><div class="lbl">Actions</div></div>
+      <div class="metric-mini"><div class="val" style="color:${sd?'var(--red)':'var(--green)'}">${sd?'YES':'NO'}</div><div class="lbl">Shutdown?</div></div>
+    </div>
+
+    ${imgNames.length?`
+    <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">
+      📷 Images Captured (${imgNames.length})
+    </div>
+    <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px">
+      ${imgNames.map(fname=>`
+        <div style="flex-shrink:0;width:180px">
+          <div style="position:relative;border-radius:5px;overflow:hidden;border:1px solid var(--border)">
+            <img src="${imgBase}${encodeURIComponent(fname)}"
+              style="width:180px;height:120px;object-fit:cover;display:block;background:var(--surface3);cursor:zoom-in"
+              onclick="event.stopPropagation();openLightbox('${imgBase}${encodeURIComponent(fname)}','${escJ(fname)}')"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+              loading="lazy"/>
+            <div style="display:none;width:180px;height:120px;align-items:center;justify-content:center;background:var(--surface2);color:var(--text3);font-size:11px">No preview</div>
+            <div style="position:absolute;top:5px;left:5px">${sevBadge(byImg[fname].reduce((w,o)=>{const ord=['low','medium','high','critical'];return ord.indexOf(o.severity)>ord.indexOf(w)?o.severity:w},'low'))}</div>
+          </div>
+          <div style="font-size:9px;color:var(--text3);margin-top:3px;padding:0 1px" class="truncate">${esc(fname)}</div>
+          ${byImg[fname].map(o=>`
+            <div style="font-size:10px;color:var(--text2);margin-top:3px;line-height:1.4;padding:4px 6px;background:var(--surface2);border-radius:3px;border-left:2px solid ${sevColor(o.severity)}">
+              ${esc(o.description)}
+              <span style="color:var(--text3);float:right">${Math.round(o.confidence*100)}%</span>
+            </div>`).join('')}
+        </div>`).join('')}
+    </div>`:``}
+
+    ${d.has_findings?`
+    <div class="flex gap-8" style="margin-top:8px">
+      <button class="btn btn-ok" style="flex:1;justify-content:center" onclick="go('approvals')">Review Approvals →</button>
+      <button class="btn btn-err btn-sm" onclick="dismissFindings('${d.run_id}')" title="Mark all findings as no action required">Dismiss All</button>
+    </div>`:''}
+  `;
+}
+
+async function dismissFindings(runId){
+  if(!confirm('Dismiss all findings for this patrol? All pending actions will be marked as no action required.')) return;
+  try{
+    const r=await apiFetch(`/xmpro/patrol/${runId}/dismiss`,{method:'POST'});
+    toast(`${r.dismissed} finding(s) dismissed — no action required`,'success');
+    _lastPatrolResult=null;
+    try{localStorage.removeItem('lastPatrolResult');}catch(e){}
+    updateBadge();
+    // Clear result panel
+    const res=document.getElementById('patrol-result');
+    if(res){
+      res.style.display='flex';
+      res.innerHTML=`<div style="text-align:center">
+        <div style="color:var(--green);font-size:13px;font-weight:600;margin-bottom:4px">✓ All findings dismissed</div>
+        <div style="font-size:11px;color:var(--text3)">No action required. Patrol run kept in audit trail.</div>
+      </div>`;
+    }
+  }catch(e){toast('Failed to dismiss: '+e.message,'error');}
+}
+
+// ── Approvals ──────────────────────────────────────────────────────────────
+
+async function renderApprovals(){
+  show(`<div class="loading-center"><div class="spinner"></div> Loading…</div>`);
+  let pending=[];
+  try{pending=await apiFetch('/xmpro/approvals/pending');}
+  catch(e){toast('Failed to load approvals','error');}
+  updateBadge(pending.length);
+
+  show(`
+    <div class="flex justify-between items-center" style="margin-bottom:8px">
+      <div class="section-title" style="margin:0">Pending Approvals <span style="font-weight:400;color:var(--text3)">(${pending.length})</span></div>
+      <button class="btn btn-ghost btn-sm" onclick="renderApprovals()">↻ Refresh</button>
+    </div>
+
+    ${pending.length===0?`
+    <div class="empty-state">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg>
+      <div style="color:var(--green);font-size:12px;margin-bottom:3px">No pending approvals</div>
+      <div>All actions have been reviewed</div>
+    </div>`:`
+    <div>
+      ${pending.map(item=>approvalCard(item)).join('')}
+    </div>`}
+
+    <div class="divider"></div>
+    <div class="section-title">Approved — Awaiting Completion</div>
+    <div id="approved-list"><div class="text-muted" style="font-size:11px">Loading…</div></div>
+  `);
+  loadApproved();
+}
+
+function approvalCard(item){
+  const sd=item.requires_shutdown;
+  return`<div class="approval-card${sd?' shutdown':''}">
+    <div class="flex items-center gap-6" style="margin-bottom:5px">
+      ${sevBadge(item.severity)}
+      ${sd?`<span class="badge sev-critical" style="font-size:9px">⚠ SHUTDOWN REQUIRED</span>`:''}
+      <span style="font-size:10px;color:var(--text3)">Priority ${item.priority}</span>
+      <span style="font-size:10px;color:var(--text3);margin-left:auto">${fmt(item.created_at)}</span>
+    </div>
+    <div style="font-size:12px;color:var(--text);margin-bottom:5px">${esc(item.action_description)}</div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:7px">
+      📍 ${esc(item.site_name)} · ${esc(item.zone)}${item.asset_id?` · ${esc(item.asset_id)}`:''}${item.work_order_number?` · ${esc(item.work_order_number)}`:''}
+      ${item.reference_standard?`<span class="text-accent"> · 📖 ${esc(item.reference_standard)}</span>`:''}
+    </div>
+    <div class="flex gap-6">
+      <button class="btn btn-ok btn-sm" onclick="openModal('${item.workflow_item_id}','${escJ(item.action_description)}',true)">✓ Approve</button>
+      <button class="btn btn-err btn-sm" onclick="openModal('${item.workflow_item_id}','${escJ(item.action_description)}',false)">✕ Reject</button>
+    </div>
+  </div>`;
+}
+
+async function loadApproved(){
+  const el=document.getElementById('approved-list');if(!el)return;
+  try{
+    const hist=await apiFetch('/xmpro/history?limit=20');
+    let found=[];
+    for(const r of hist.slice(0,8)){
+      if(r.total_actions===0)continue;
+      const d=await apiFetch(`/xmpro/patrol/${r.run_id}`);
+      const ap=d.workflow?.items?.approved||[];
+      ap.forEach(i=>found.push({...i,run_id:r.run_id,site:r.site_name}));
+    }
+    if(!el)return;
+    if(found.length===0){el.innerHTML=`<div class="text-muted" style="font-size:11px">No approved actions awaiting completion.</div>`;return;}
+    el.innerHTML=found.map(i=>`
+      <div class="flex items-center gap-8" style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:7px 10px;margin-bottom:5px">
+        <div style="flex:1;font-size:12px;color:var(--text2)" class="truncate">${esc(i.action)}</div>
+        <button class="btn btn-accent btn-sm" onclick="openComplete('${i.workflow_item_id}','${escJ(i.action)}')">Mark Complete</button>
+      </div>`).join('');
+  }catch(e){if(el)el.innerHTML=`<div class="text-muted" style="font-size:11px">Unable to load.</div>`;}
+}
+
+// ── Status ─────────────────────────────────────────────────────────────────
+
+function renderStatus(){
+  show(`
+    <div class="section-title">Patrol Audit Trail</div>
+    <div class="card" style="padding:10px;margin-bottom:10px">
+      <div class="flex gap-8">
+        <input class="inp" id="run-id-inp" placeholder="Enter Run ID (UUID)…" style="flex:1;font-family:monospace"/>
+        <button class="btn btn-accent" onclick="doLookup()">Look Up</button>
+      </div>
+    </div>
+    <div id="status-detail"></div>
+  `);
+}
+
+async function doLookup(){
+  const runId=v('run-id-inp');if(!runId){toast('Enter a Run ID','error');return;}
+  const el=document.getElementById('status-detail');
+  el.innerHTML=`<div class="loading-center"><div class="spinner"></div></div>`;
+  try{
+    const d=await apiFetch(`/xmpro/patrol/${runId}`);
+    renderStatusDetail(d);
+  }catch(e){
+    el.innerHTML=`<div class="card" style="padding:12px;text-align:center;color:var(--red);font-size:12px">Run not found</div>`;
+  }
+}
+
+function renderStatusDetail(d){
+  const el=document.getElementById('status-detail');
+  const wf=d.workflow||{};const bs=wf.by_status||{};const items=wf.items||{};
+  const obs=d.observations||[];
+  const imgBase=window.location.origin+'/images/';
+
+  // Group observations by image filename
+  const byImg={};
+  obs.forEach(o=>{
+    if(!byImg[o.image_filename])byImg[o.image_filename]=[];
+    byImg[o.image_filename].push(o);
+  });
+  const imgNames=Object.keys(byImg);
+
+  el.innerHTML=`
+    <div class="card" style="padding:10px;margin-bottom:8px">
+      <div class="flex justify-between items-center" style="margin-bottom:4px">
+        <div>
+          <div style="font-size:12px;font-weight:600">${esc(d.site)} / ${esc(d.zone)}</div>
+          <div class="mono text-muted" style="margin-top:1px">${d.run_id}</div>
+          ${d.work_order_number?`<div style="font-size:10px;color:var(--accent);margin-top:1px">${esc(d.work_order_number)}</div>`:''}
+        </div>
+        ${sevBadge(d.overall_severity)}
+      </div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.45;margin-top:5px">${esc(d.summary)||'—'}</div>
+      <div class="flex gap-8" style="margin-top:8px">
+        ${wfMini('Total',wf.total||0,'var(--text)')}
+        ${wfMini('Pending',bs.pending_review||0,'var(--yellow)')}
+        ${wfMini('Approved',bs.approved||0,'var(--green)')}
+        ${wfMini('Completed',bs.completed||0,'var(--accent)')}
+        ${wfMini('Rejected',bs.rejected||0,'var(--red)')}
+      </div>
+    </div>
+
+    ${imgNames.length?`
+    <div class="card" style="padding:10px;margin-bottom:8px">
+      <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">
+        📷 Images Captured (${imgNames.length})
+      </div>
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
+        ${imgNames.map(fname=>`
+          <div style="flex-shrink:0;width:160px">
+            <div style="position:relative;border-radius:5px;overflow:hidden;border:1px solid var(--border)">
+              <img src="${imgBase}${encodeURIComponent(fname)}"
+                style="width:160px;height:105px;object-fit:cover;display:block;background:var(--surface3);cursor:zoom-in"
+                onclick="openLightbox('${imgBase}${encodeURIComponent(fname)}','${escJ(fname)}')"
+                onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                loading="lazy"/>
+              <div style="display:none;width:160px;height:105px;align-items:center;justify-content:center;background:var(--surface2);color:var(--text3);font-size:11px">No preview</div>
+              <div style="position:absolute;top:4px;left:4px">${sevBadge(byImg[fname].reduce((w,o)=>{const ord=['low','medium','high','critical'];return ord.indexOf(o.severity)>ord.indexOf(w)?o.severity:w},'low'))}</div>
+            </div>
+            <div style="font-size:9px;color:var(--text3);margin-top:3px" class="truncate">${esc(fname)}</div>
+            ${byImg[fname].map(o=>`
+              <div style="font-size:10px;color:var(--text2);margin-top:3px;line-height:1.4;padding:3px 6px;background:var(--surface2);border-radius:3px;border-left:2px solid ${sevColor(o.severity)}">
+                ${esc(o.description)}
+                <span style="color:var(--text3);float:right">${Math.round(o.confidence*100)}%</span>
+              </div>`).join('')}
+          </div>`).join('')}
+      </div>
+    </div>`:``}
+
+    ${Object.entries(items).filter(([,v])=>v.length>0).map(([status,list])=>`
+      <div class="card" style="overflow:hidden;margin-bottom:6px">
+        <div style="padding:6px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px">
+          ${stBadge(status)}<span style="font-size:10px;color:var(--text3)">${list.length} item(s)</span>
+        </div>
+        <table>
+          <thead><tr><th>Action</th><th>Shutdown</th><th>Standard</th><th>Reviewer</th></tr></thead>
+          <tbody>
+            ${list.map(i=>`<tr>
+              <td style="max-width:200px" class="truncate">${esc(i.action)}</td>
+              <td style="font-size:10px;color:${i.requires_shutdown?'var(--red)':'var(--text3)'}">${i.requires_shutdown?'YES':'No'}</td>
+              <td style="font-size:10px;color:var(--accent);max-width:120px" class="truncate">${esc(i.reference_standard)||'—'}</td>
+              <td style="font-size:10px">${esc(i.reviewer_id)||'—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`).join('')}
+  `;
+}
+
+function wfMini(l,v,c){return`<div style="text-align:center;flex:1"><div style="font-size:16px;font-weight:700;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3)">${l}</div></div>`;}
+
+function lookupRun(id){
+  go('status');
+  setTimeout(()=>{
+    const inp=document.getElementById('run-id-inp');
+    if(inp){inp.value=id;doLookup();}
+  },60);
+}
+
+// ── History ────────────────────────────────────────────────────────────────
+
+async function renderHistory(){
+  show(`<div class="loading-center"><div class="spinner"></div> Loading…</div>`);
+  try{_historyData=await apiFetch('/xmpro/history?limit=100');}
+  catch(e){toast('Failed to load history','error');}
+
+  show(`
+    <div class="flex justify-between items-center" style="margin-bottom:8px">
+      <div class="section-title" style="margin:0">Patrol History <span style="font-weight:400;color:var(--text3)">(${_historyData.length})</span></div>
+      <div class="flex gap-6">
+        <input class="inp" id="hist-filter" placeholder="Filter…" oninput="filterHist()" style="width:140px;padding:3px 8px"/>
+        <button class="btn btn-ghost btn-sm" onclick="renderHistory()">↻</button>
+      </div>
+    </div>
+    <div class="card" style="overflow:hidden" id="hist-table">${histTable(_historyData)}</div>
+  `);
+}
+
+function histTable(data){
+  if(!data.length)return`<div class="empty-state"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="12 8 12 12 14 14"/><path d="M3.1 11a9 9 0 1 0 .4-3.5"/><polyline points="3 3 3 9 9 9"/></svg>No history</div>`;
+  return`<table>
+    <thead><tr><th>Run ID</th><th>Work Order</th><th>Location</th><th>Sev.</th><th>Progress</th><th>Time</th><th></th></tr></thead>
+    <tbody>${data.map(r=>`<tr>
+      <td class="mono text-accent" style="cursor:pointer;font-size:10px" onclick="lookupRun('${r.run_id}')">${r.run_id.slice(0,8)}…</td>
+      <td style="font-size:11px;color:var(--accent);white-space:nowrap">${esc(r.work_order_number)||'—'}</td>
+      <td style="font-size:10px">${esc(r.site_name)||'—'}<span class="text-muted"> / </span>${esc(r.zone)||'—'}${r.asset_id?`<br><span style="color:var(--text3)">${esc(r.asset_id)}</span>`:''}</td>
+      <td>${sevBadge(r.overall_severity)}</td>
+      <td style="min-width:70px"><div class="prog-bar"><div class="prog-fill" style="width:${r.total_actions>0?Math.round(r.completed_actions/r.total_actions*100):0}%"></div></div><div style="font-size:9px;color:var(--text3);margin-top:1px">${r.completed_actions}/${r.total_actions}</div></td>
+      <td style="font-size:9px;color:var(--text3);white-space:nowrap">${fmt(r.captured_at)}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="lookupRun('${r.run_id}')">→</button></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function filterHist(){
+  const q=v('hist-filter').toLowerCase();
+  const filtered=_historyData.filter(r=>[r.site_name,r.zone,r.asset_id,r.work_order_number].some(f=>(f||'').toLowerCase().includes(q)));
+  document.getElementById('hist-table').innerHTML=histTable(filtered);
+}
+
+// ── Modals ─────────────────────────────────────────────────────────────────
+
+function openModal(id,desc,defaultApprove){
+  _approvalItemId=id;
+  document.getElementById('modal-title').textContent=defaultApprove===false?'Reject Action':'Review Action';
+  document.getElementById('modal-desc').textContent=desc;
+  document.getElementById('reviewer-id').value='';
+  document.getElementById('reviewer-notes').value='';
+  document.getElementById('modal').style.display='flex';
+}
+
+function closeModal(){document.getElementById('modal').style.display='none';}
+
+async function doApproval(approved){
+  const rid=v('reviewer-id');
+  if(!rid){toast('Reviewer ID required','error');return;}
+  closeModal();
+  try{
+    await apiFetch(`/xmpro/approvals/${_approvalItemId}/approve`,{method:'POST',body:{approved,reviewer_id:rid,reviewer_notes:v('reviewer-notes')||null}});
+    toast(approved?'Action approved — queued for execution':'Action rejected','success');
+    renderApprovals();
+  }catch(e){toast('Failed: '+e.message,'error');}
+}
+
+function openComplete(id,desc){
+  _completeItemId=id;
+  document.getElementById('complete-desc').textContent=desc;
+  document.getElementById('modal-complete').style.display='flex';
+}
+
+async function doComplete(){
+  document.getElementById('modal-complete').style.display='none';
+  try{
+    await apiFetch(`/xmpro/workflow/${_completeItemId}/complete`,{method:'POST'});
+    toast('Marked as completed','success');
+    renderApprovals();
+  }catch(e){toast('Failed: '+e.message,'error');}
+}
+
+// ── Chat ───────────────────────────────────────────────────────────────────
+
+async function sendChat(){
+  if(_chatLoading)return;
+  const inp=document.getElementById('chat-inp');
+  const msg=inp.value.trim();if(!msg)return;
+  inp.value='';
+  addMsg(msg,'user');
+  _chatLoading=true;
+  const tid=addMsg('…','ai',true);
+  try{
+    const data=await apiFetch('/chat',{method:'POST',body:{message:msg,history:[]}});
+    document.getElementById(tid)?.remove();
+    addMsg(data.answer||JSON.stringify(data),'ai');
+  }catch(e){
+    document.getElementById(tid)?.remove();
+    addMsg('Error: '+e.message,'ai');
+  }
+  _chatLoading=false;
+}
+
+function addMsg(text,role,temp=false){
+  const box=document.getElementById('ai-messages');
+  const id='m'+Date.now()+Math.random().toString(36).slice(2);
+  const d=document.createElement('div');
+  d.id=id;
+  if(role==='user'){
+    d.className='msg-user';
+    d.textContent=text;
+  }else{
+    d.className='msg-ai';
+    const body=temp
+      ?'<div class="spinner" style="margin:2px 0"></div>'
+      :`<div class="md">${marked.parse(text)}</div>`;
+    d.innerHTML=`<div class="msg-ai-label"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>AI Coworker</div>${body}`;
+  }
+  box.appendChild(d);
+  box.scrollTop=box.scrollHeight;
+  return id;
+}
+
+// ── API helper ─────────────────────────────────────────────────────────────
+
+async function apiFetch(path,opts={}){
+  const res=await fetch(API+path,{
+    method:opts.method||'GET',
+    headers:{'Content-Type':'application/json'},
+    body:opts.body?JSON.stringify(opts.body):undefined,
+  });
+  if(!res.ok){const e=await res.json().catch(()=>({detail:res.statusText}));const msg=typeof e.detail==='string'?e.detail:Array.isArray(e.detail)?e.detail.map(x=>x.msg||JSON.stringify(x)).join('; '):JSON.stringify(e.detail);throw new Error(msg||res.statusText);}
+  return res.json();
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function show(html){document.getElementById('content').innerHTML=html;}
+function v(id){return(document.getElementById(id)?.value||'').trim();}
+
+function updateBadge(n){
+  if(n===undefined){apiFetch('/xmpro/approvals/pending').then(d=>updateBadge(d.length)).catch(()=>{});return;}
+  const b=document.getElementById('approval-badge');
+  b.style.display=n>0?'inline':'none';
+  b.textContent=n;
+}
+
+// ── Lightbox ───────────────────────────────────────────────────────────────
+
+function openLightbox(src, caption){
+  const lb=document.getElementById('lightbox');
+  document.getElementById('lightbox-img').src=src;
+  document.getElementById('lightbox-caption').textContent=caption||'';
+  lb.style.display='flex';
+}
+
+function closeLightbox(){
+  document.getElementById('lightbox').style.display='none';
+}
+
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeLightbox(); });
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+
+marked.setOptions({breaks:true,gfm:true});
+go('dashboard');
+setInterval(updateBadge,30000);
+</script>
+</body>
+</html>

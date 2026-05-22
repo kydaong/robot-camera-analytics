@@ -11,8 +11,15 @@ from app.models.schemas import (
 )
 
 
-def persist_inspection(db: Session, insight: InspectionInsight) -> None:
+def persist_inspection(
+    db: Session,
+    insight: InspectionInsight,
+    work_order_number: str | None = None,
+) -> None:
     """Save the inspection run and create pending workflow items for each action."""
+    payload = insight.model_dump(mode="json")
+    if work_order_number:
+        payload["work_order_number"] = work_order_number
     run = InspectionRun(
         run_id=insight.run_id,
         robot_id=insight.robot_id,
@@ -22,7 +29,7 @@ def persist_inspection(db: Session, insight: InspectionInsight) -> None:
         captured_at=insight.captured_at,
         overall_severity=insight.overall_severity.value,
         summary=insight.summary,
-        insight_payload=insight.model_dump(mode="json"),
+        insight_payload=payload,
     )
     db.add(run)
 

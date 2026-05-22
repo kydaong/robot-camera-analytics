@@ -1,8 +1,12 @@
 """
 Main FastAPI application
 """
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from app.api.v1 import chat, inspection, workflow, xmpro
 from app.config import settings
 from app.core.database import create_tables
@@ -42,13 +46,25 @@ async def startup():
     ensure_collections()
 
 
+_FRONTEND = Path(__file__).parent.parent / "frontend"
+_IMAGES = Path(__file__).parent.parent / "data" / "sample_images"
+
+# Serve robot images so the UI can display them
+app.mount("/images", StaticFiles(directory=str(_IMAGES)), name="images")
+
+
+@app.get("/ui", include_in_schema=False)
+async def serve_ui():
+    return FileResponse(_FRONTEND / "index.html")
+
+
 @app.get("/")
 async def root():
-    """Root endpoint"""
     return {
         "message": "Robot Camera Analytics API",
         "version": settings.APP_VERSION,
-        "docs": "/docs"
+        "docs": "/docs",
+        "ui": "/ui",
     }
 
 

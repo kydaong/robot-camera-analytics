@@ -2,12 +2,13 @@
 XMPro Data Stream integration endpoints.
 
 Full patrol lifecycle:
-  1. POST /xmpro/patrol          — XMPro sends work order + Spot images → AI analysis
-  2. GET  /xmpro/patrol/{run_id} — Full patrol report + workflow status (Spot audit trail)
-  3. GET  /xmpro/approvals/pending — Poll for items awaiting human sign-off
-  4. POST /xmpro/approvals/{id}/approve — Operator approves or rejects an action
-  5. POST /xmpro/workflow/{id}/complete — Crew marks action as done
-  6. GET  /xmpro/history          — Full patrol history across all runs
+  1. POST /xmpro/patrol                  — XMPro sends work order metadata → AI analysis
+  2. POST /xmpro/scheduled-patrol        — Daily scheduled run (auto WO number, static body)
+  3. GET  /xmpro/patrol/{run_id}         — Full patrol report + workflow status
+  4. GET  /xmpro/approvals/pending       — Poll for items awaiting human sign-off
+  5. POST /xmpro/approvals/{id}/approve  — Operator approves or rejects an action
+  6. POST /xmpro/workflow/{id}/complete  — Crew marks action as done
+  7. GET  /xmpro/history                 — Full patrol history across all runs
 """
 from __future__ import annotations
 
@@ -64,6 +65,7 @@ class PatrolResult(BaseModel):
     summary: str
     insight: Optional[InspectionInsight]  # full detail when findings exist
     message: str                          # human-readable status for XMPro App Designer
+    next_steps: list[str] = Field(default_factory=list)  # what operator should do next
 
 
 class PendingApprovalItem(BaseModel):
@@ -111,20 +113,27 @@ SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 
 def _load_sample_images(asset_id: Optional[str]) -> list[Path]:
     """
-    Load pre-staged sample images for this asset.
-    Falls back to 'default' folder if no asset-specific images exist.
+    Image lookup priority:
+      1. data/sample_images/{asset_id}/   — asset-specific images
+      2. data/sample_images/default/      — generic fallback folder
+      3. data/sample_images/              — root folder (images dropped here directly)
     """
-    if asset_id:
-        asset_dir = SAMPLE_IMAGES_DIR / asset_id
-        if asset_dir.exists():
-            images = [f for f in asset_dir.iterdir() if f.suffix.lower() in SUPPORTED_EXTENSIONS]
-            if images:
-                return images
+    def images_in(folder: Path) -> list[Path]:
+        if folder.exists():
+            return [f for f in folder.iterdir() if f.suffix.lower() in SUPPORTED_EXTENSIONS]
+        return []
 
-    default_dir = SAMPLE_IMAGES_DIR / "default"
-    if default_dir.exists():
-        return [f for f in default_dir.iterdir() if f.suffix.lower() in SUPPORTED_EXTENSIONS]
-    return []
+    if asset_id:
+        imgs = images_in(SAMPLE_IMAGES_DIR / asset_id)
+        if imgs:
+            return imgs
+
+    imgs = images_in(SAMPLE_IMAGES_DIR / "default")
+    if imgs:
+        return imgs
+
+    # Root folder fallback — images dropped directly into data/sample_images/
+    return images_in(SAMPLE_IMAGES_DIR)
 
 
 @router.post("/patrol", response_model=PatrolResult)
@@ -187,9 +196,11 @@ async def submit_patrol(
 
     # ── Findings path ─────────────────────────────────────────────────────────
     insight = generate_insight(request, all_observations)
-    persist_inspection(db, insight)          # saves run + creates workflow items
+    persist_inspection(db, insight, work_order_number=payload.work_order_number)
 
     action_count = len(insight.proposed_actions)
+    shutdown_required = any(a.requires_shutdown for a in insight.proposed_actions)
+
     return PatrolResult(
         run_id=insight.run_id,
         work_order_number=payload.work_order_number,
@@ -203,11 +214,97 @@ async def submit_patrol(
             f"⚠ {len(insight.observations)} observation(s) found — severity: "
             f"{insight.overall_severity.value.upper()}. "
             f"{action_count} action(s) require human approval before proceeding."
+            + (" SHUTDOWN REQUIRED for some actions." if shutdown_required else "")
         ),
+        next_steps=[
+            f"1. Review {action_count} pending action(s) at GET /api/v1/xmpro/approvals/pending",
+            f"2. Approve or reject each action at POST /api/v1/xmpro/approvals/{{workflow_item_id}}/approve",
+            f"3. Track full audit trail at GET /api/v1/xmpro/patrol/{insight.run_id}",
+            "4. Mark actions completed at POST /api/v1/xmpro/workflow/{{workflow_item_id}}/complete",
+        ],
     )
 
 
-# ── 2. Get patrol status (full audit trail) ────────────────────────────────────
+# ── 2. Scheduled daily patrol (XMPro DataStream timer trigger) ────────────────
+
+class ScheduledPatrolConfig(BaseModel):
+    """
+    Static config stored in XMPro DataStream REST API Agent.
+    Work order number is auto-generated from today's date so the body never changes.
+    """
+    site_name: str = "Choa Chu Kang Waterworks"
+    zone: str = "Pump Station A"
+    asset_id: Optional[str] = None
+    robot_id: str = "spot-001"
+    patrol_type: str = "routine"
+
+
+@router.post("/scheduled-patrol", response_model=PatrolResult)
+async def scheduled_patrol(
+    config: ScheduledPatrolConfig = ScheduledPatrolConfig(),
+    db: Session = Depends(get_db),
+):
+    """
+    Daily scheduled inspection triggered by XMPro DataStream (Timer Agent → REST API Agent).
+
+    XMPro DataStream setup:
+      Agent 1 — Timer:        interval = 1 day, fire at 08:00
+      Agent 2 — REST API:     POST http://<VM-IP>:8000/api/v1/xmpro/scheduled-patrol
+                              Content-Type: application/json
+                              Body: {"site_name":"Choa Chu Kang Waterworks",
+                                     "zone":"Pump Station A","asset_id":"PUMP-001"}
+
+    The work order number is auto-generated as WO-DAILY-YYYYMMDD so the body
+    stays static — no dynamic expressions needed in XMPro.
+    """
+    today = datetime.utcnow().strftime("%Y%m%d")
+    auto_wo = f"WO-DAILY-{today}"
+
+    payload = PatrolRequest(
+        work_order_number=auto_wo,
+        site_name=config.site_name,
+        zone=config.zone,
+        asset_id=config.asset_id,
+        robot_id=config.robot_id,
+        patrol_type=config.patrol_type,
+        notes="Auto-generated daily scheduled inspection",
+    )
+    return await submit_patrol(payload, db)
+
+
+# ── 3. Dismiss all findings for a patrol run ──────────────────────────────────
+
+@router.post("/patrol/{run_id}/dismiss", response_model=dict)
+def dismiss_patrol_findings(run_id: str, db: Session = Depends(get_db)):
+    """
+    Bulk-reject all pending workflow items for a run.
+    Use when findings are false positives or no action is required.
+    The run record is kept for the audit trail; items are marked rejected.
+    """
+    run = db.query(InspectionRun).filter(InspectionRun.run_id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Patrol run not found")
+
+    pending = (
+        db.query(DBWorkflowItem)
+        .filter(
+            DBWorkflowItem.run_id == run_id,
+            DBWorkflowItem.status == WorkflowStatus.pending_review.value,
+        )
+        .all()
+    )
+    from datetime import datetime as _dt
+    for item in pending:
+        item.status = WorkflowStatus.rejected.value
+        item.reviewed_at = _dt.utcnow()
+        item.reviewer_id = "system"
+        item.reviewer_notes = "Dismissed — no action required"
+    db.commit()
+
+    return {"run_id": run_id, "dismissed": len(pending)}
+
+
+# ── 5. Get patrol status (full audit trail) ────────────────────────────────────
 
 @router.get("/patrol/{run_id}", response_model=dict)
 def get_patrol_status(run_id: str, db: Session = Depends(get_db)):
@@ -248,6 +345,7 @@ def get_patrol_status(run_id: str, db: Session = Depends(get_db)):
         "has_findings": run.overall_severity not in (None, "none"),
         "summary": run.summary,
         "work_order_number": (run.insight_payload or {}).get("work_order_number"),
+        "observations": (run.insight_payload or {}).get("observations", []),
         "workflow": {
             "total": sum(len(v) for v in items_by_status.values()),
             "by_status": {k: len(v) for k, v in items_by_status.items()},

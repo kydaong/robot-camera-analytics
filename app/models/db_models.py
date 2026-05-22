@@ -2,6 +2,7 @@
 SQLAlchemy ORM models for Azure SQL tables.
 """
 from datetime import datetime
+from uuid import uuid4
 
 from sqlalchemy import (
     Boolean, Column, DateTime, Float, ForeignKey,
@@ -59,7 +60,7 @@ class InspectionRun(Base):
     __tablename__ = "spot_inspection_runs"
 
     id = Column(Integer, primary_key=True, index=True)
-    run_id = Column(String(36), unique=True, index=True, nullable=False)
+    run_id = Column(String(36), unique=True, index=True, nullable=False, default=lambda: str(uuid4()))
     robot_id = Column(String(50), nullable=False)
     site_name = Column(String(100))
     zone = Column(String(100))
@@ -77,7 +78,7 @@ class WorkflowItem(Base):
     __tablename__ = "spot_workflow_items"
 
     id = Column(Integer, primary_key=True, index=True)
-    workflow_item_id = Column(String(36), unique=True, index=True, nullable=False)
+    workflow_item_id = Column(String(36), unique=True, index=True, nullable=False, default=lambda: str(uuid4()))
     run_id = Column(String(36), ForeignKey("spot_inspection_runs.run_id"), nullable=False)
     action_payload = Column(JSON, nullable=False)  # ProposedAction JSON
     status = Column(String(30), default="pending_review")
