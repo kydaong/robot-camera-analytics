@@ -171,43 +171,24 @@ tr:hover td{background:rgba(255,255,255,.015)}
   <!-- TOP BAR -->
   <div class="topbar">
     <div class="topbar-title">
-      <div class="topbar-icon">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#29b6f6" stroke-width="2.2">
-          <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>
-        </svg>
-      </div>
       Spot Robot Inspection
       <div class="live-dot"></div>
     </div>
-    <button class="btn btn-ghost btn-sm" id="ai-btn" onclick="toggleAI()" style="gap:5px">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <button class="btn btn-ghost btn-sm" id="ai-btn" onclick="toggleAI()">
       AI Coworker
     </button>
   </div>
 
   <!-- TABS -->
   <div class="tabs" id="tabs">
-    <button class="tab active" onclick="go('dashboard')">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Dashboard
-    </button>
-    <button class="tab" onclick="go('patrol')">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      Submit Patrol
-    </button>
+    <button class="tab active" onclick="go('dashboard')">Dashboard</button>
+    <button class="tab" onclick="go('patrol')">Submit Patrol</button>
     <button class="tab" onclick="go('approvals')" id="tab-approvals">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       Approvals
       <span class="tab-badge" id="approval-badge" style="display:none">0</span>
     </button>
-    <button class="tab" onclick="go('status')">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Status
-    </button>
-    <button class="tab" onclick="go('history')">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12 8 12 12 14 14"/><path d="M3.1 11a9 9 0 1 0 .4-3.5"/><polyline points="3 3 3 9 9 9"/></svg>
-      History
-    </button>
+    <button class="tab" onclick="go('status')">Status</button>
+    <button class="tab" onclick="go('history')">History</button>
   </div>
 
   <!-- MAIN CONTENT -->
@@ -217,33 +198,22 @@ tr:hover td{background:rgba(255,255,255,.015)}
   <div class="ai-overlay" id="ai-overlay" style="display:none">
     <div class="ai-header">
       <div class="flex items-center gap-8">
-        <div style="width:22px;height:22px;border-radius:5px;background:var(--purple-dim);border:1px solid rgba(171,71,188,.25);display:flex;align-items:center;justify-content:center">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ab47bc" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        </div>
         <div>
           <div style="font-size:12px;font-weight:600">AI Coworker <span style="font-size:10px;color:var(--text3);font-weight:400">— Mode 1</span></div>
           <div style="font-size:10px;color:var(--text3)">CMMS · Work Orders · SS Standards · OEM Manuals</div>
         </div>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="toggleAI()">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        Close
-      </button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleAI()">Close</button>
     </div>
     <div class="ai-messages" id="ai-messages">
       <div class="msg-ai">
-        <div class="msg-ai-label">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          AI Coworker
-        </div>
+        <div class="msg-ai-label">AI Coworker</div>
         Hello! Ask me about work orders, asset history, maintenance standards, or past inspection findings at Choa Chu Kang Waterworks.
       </div>
     </div>
     <div class="ai-input-row">
       <input id="chat-inp" class="inp" placeholder="Ask about assets, work orders, SS standards…" onkeydown="if(event.key==='Enter')sendChat()" style="flex:1"/>
-      <button class="btn btn-accent" onclick="sendChat()" id="chat-send-btn">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-      </button>
+      <button class="btn btn-accent" onclick="sendChat()" id="chat-send-btn">Send</button>
     </div>
   </div>
 
@@ -251,7 +221,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
 
 <!-- LIGHTBOX -->
 <div id="lightbox" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.88);align-items:center;justify-content:center;flex-direction:column" onclick="closeLightbox()">
-  <div style="position:absolute;top:14px;right:18px;color:#aaa;font-size:11px;cursor:pointer" onclick="closeLightbox()">✕ Close</div>
+  <div style="position:absolute;top:14px;right:18px;color:#aaa;font-size:11px;cursor:pointer" onclick="closeLightbox()">Close</div>
   <img id="lightbox-img" src="" style="max-width:90vw;max-height:82vh;border-radius:8px;box-shadow:0 8px 48px rgba(0,0,0,.7);object-fit:contain" onclick="event.stopPropagation()"/>
   <div id="lightbox-caption" style="margin-top:10px;font-size:11px;color:#888;max-width:80vw;text-align:center"></div>
 </div>
@@ -270,8 +240,8 @@ tr:hover td{background:rgba(255,255,255,.015)}
       <textarea class="inp" id="reviewer-notes" rows="2" placeholder="Remarks…" style="resize:none"></textarea>
     </div>
     <div class="flex gap-8" style="margin-top:12px">
-      <button class="btn btn-ok flex-1" onclick="doApproval(true)">✓ Approve</button>
-      <button class="btn btn-err flex-1" onclick="doApproval(false)">✕ Reject</button>
+      <button class="btn btn-ok flex-1" onclick="doApproval(true)">Approve</button>
+      <button class="btn btn-err flex-1" onclick="doApproval(false)">Reject</button>
       <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
     </div>
   </div>
@@ -364,8 +334,8 @@ async function renderDashboard(){
     ${pending.length>0?`
     <div style="margin-bottom:10px">
       <div class="flex justify-between items-center" style="margin-bottom:6px">
-        <div class="section-title" style="margin:0">⚠ Awaiting Approval</div>
-        <button class="btn btn-ghost btn-sm" onclick="go('approvals')">View all →</button>
+        <div class="section-title" style="margin:0">Awaiting Approval</div>
+        <button class="btn btn-ghost btn-sm" onclick="go('approvals')">View all</button>
       </div>
       ${pending.slice(0,3).map(p=>`
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:5px;display:flex;align-items:center;gap:8px">
@@ -379,12 +349,11 @@ async function renderDashboard(){
       ${pending.length>3?`<div style="font-size:10px;color:var(--text3);text-align:center">+${pending.length-3} more</div>`:''}
     </div>`:`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:8px 10px;display:flex;align-items:center;gap:8px;margin-bottom:10px">
-      <div style="color:var(--green)">✓</div>
       <div style="font-size:12px;color:var(--text2)">No pending approvals — all inspection actions reviewed.</div>
     </div>`}
 
     <div class="section-title">Recent Patrols</div>
-    ${history.length===0?`<div class="empty-state" style="padding:16px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>No patrols yet</div>`:`
+    ${history.length===0?`<div class="empty-state" style="padding:16px">No patrols yet</div>`:`
     <div class="card" style="overflow:hidden">
     <table>
       <thead><tr><th>Run ID</th><th>Location</th><th>Severity</th><th>Progress</th><th>Time</th><th></th></tr></thead>
@@ -398,7 +367,7 @@ async function renderDashboard(){
             <div style="font-size:9px;color:var(--text3);margin-top:2px">${r.completed_actions}/${r.total_actions}</div>
           </td>
           <td style="font-size:10px;color:var(--text3);white-space:nowrap">${fmt(r.captured_at)}</td>
-          <td><button class="btn btn-ghost btn-sm" onclick="lookupRun('${r.run_id}')">→</button></td>
+          <td><button class="btn btn-ghost btn-sm" onclick="lookupRun('${r.run_id}')">View</button></td>
         </tr>`).join('')}
       </tbody>
     </table></div>`}
@@ -436,24 +405,15 @@ function renderPatrol(){
           </div>
           <div class="inp-row"><label class="inp-label">Notes</label><textarea class="inp" id="f-notes" rows="2" placeholder="Additional context…" style="resize:none"></textarea></div>
           <div class="flex gap-8">
-            <button class="btn btn-accent" id="patrol-btn" onclick="doPatrol()" style="flex:1;justify-content:center">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              Deploy Patrol
-            </button>
-            <button class="btn btn-ghost" onclick="resetPatrolForm()" title="Reset fields">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.18-4.43"/></svg>
-              Reset
-            </button>
+            <button class="btn btn-accent" id="patrol-btn" onclick="doPatrol()" style="flex:1;justify-content:center">Deploy Patrol</button>
+            <button class="btn btn-ghost" onclick="resetPatrolForm()" title="Reset fields">Reset</button>
           </div>
         </div>
       </div>
       <div>
         <div class="section-title">Result</div>
         <div id="patrol-result" class="card" style="padding:14px;min-height:160px;display:flex;align-items:center;justify-content:center">
-          <div class="empty-state" style="padding:0">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            Patrol result will appear here
-          </div>
+          <div class="empty-state" style="padding:0">Patrol result will appear here</div>
         </div>
       </div>
     </div>
@@ -484,7 +444,7 @@ async function doPatrol(){
     res.innerHTML=`<div style="text-align:center;color:var(--red);font-size:12px">${esc(e.message)}</div>`;
     toast('Patrol failed: '+e.message,'error');
   }
-  btn.disabled=false;btn.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Deploy Patrol';
+  btn.disabled=false;btn.innerHTML='Deploy Patrol';
 }
 
 function resetPatrolForm(){
@@ -501,7 +461,7 @@ function resetPatrolForm(){
   const res=document.getElementById('patrol-result');
   if(res){
     res.style.display='flex';
-    res.innerHTML='<div class="empty-state" style="padding:0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Patrol result will appear here</div>';
+    res.innerHTML='<div class="empty-state" style="padding:0">Patrol result will appear here</div>';
   }
   document.getElementById('f-wo')?.focus();
 }
@@ -524,7 +484,7 @@ function renderPatrolResult(d){
   res.style.display='block';
   res.innerHTML=`
     <div class="flex items-center gap-8" style="margin-bottom:6px">
-      <div style="font-size:12px;font-weight:600;color:${d.has_findings?'var(--red)':'var(--green)'}">${d.has_findings?'⚠ Findings Detected':'✓ All Clear'}</div>
+      <div style="font-size:12px;font-weight:600;color:${d.has_findings?'var(--red)':'var(--green)'}">${d.has_findings?'Findings Detected':'All Clear'}</div>
       ${d.has_findings?sevBadge(d.overall_severity):''}
     </div>
     <div class="mono text-muted" style="margin-bottom:5px;font-size:10px">RUN: ${d.run_id}</div>
@@ -538,7 +498,7 @@ function renderPatrolResult(d){
 
     ${imgNames.length?`
     <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">
-      📷 Images Captured (${imgNames.length})
+      Images Captured (${imgNames.length})
     </div>
     <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px">
       ${imgNames.map(fname=>`
@@ -563,7 +523,7 @@ function renderPatrolResult(d){
 
     ${d.has_findings?`
     <div class="flex gap-8" style="margin-top:8px">
-      <button class="btn btn-ok" style="flex:1;justify-content:center" onclick="go('approvals')">Review Approvals →</button>
+      <button class="btn btn-ok" style="flex:1;justify-content:center" onclick="go('approvals')">Review Approvals</button>
       <button class="btn btn-err btn-sm" onclick="dismissFindings('${d.run_id}')" title="Mark all findings as no action required">Dismiss All</button>
     </div>`:''}
   `;
@@ -582,7 +542,7 @@ async function dismissFindings(runId){
     if(res){
       res.style.display='flex';
       res.innerHTML=`<div style="text-align:center">
-        <div style="color:var(--green);font-size:13px;font-weight:600;margin-bottom:4px">✓ All findings dismissed</div>
+        <div style="color:var(--green);font-size:13px;font-weight:600;margin-bottom:4px">All findings dismissed</div>
         <div style="font-size:11px;color:var(--text3)">No action required. Patrol run kept in audit trail.</div>
       </div>`;
     }
@@ -601,12 +561,11 @@ async function renderApprovals(){
   show(`
     <div class="flex justify-between items-center" style="margin-bottom:8px">
       <div class="section-title" style="margin:0">Pending Approvals <span style="font-weight:400;color:var(--text3)">(${pending.length})</span></div>
-      <button class="btn btn-ghost btn-sm" onclick="renderApprovals()">↻ Refresh</button>
+      <button class="btn btn-ghost btn-sm" onclick="renderApprovals()">Refresh</button>
     </div>
 
     ${pending.length===0?`
     <div class="empty-state">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg>
       <div style="color:var(--green);font-size:12px;margin-bottom:3px">No pending approvals</div>
       <div>All actions have been reviewed</div>
     </div>`:`
@@ -626,18 +585,18 @@ function approvalCard(item){
   return`<div class="approval-card${sd?' shutdown':''}">
     <div class="flex items-center gap-6" style="margin-bottom:5px">
       ${sevBadge(item.severity)}
-      ${sd?`<span class="badge sev-critical" style="font-size:9px">⚠ SHUTDOWN REQUIRED</span>`:''}
+      ${sd?`<span class="badge sev-critical" style="font-size:9px">SHUTDOWN REQUIRED</span>`:''}
       <span style="font-size:10px;color:var(--text3)">Priority ${item.priority}</span>
       <span style="font-size:10px;color:var(--text3);margin-left:auto">${fmt(item.created_at)}</span>
     </div>
     <div style="font-size:12px;color:var(--text);margin-bottom:5px">${esc(item.action_description)}</div>
     <div style="font-size:10px;color:var(--text3);margin-bottom:7px">
-      📍 ${esc(item.site_name)} · ${esc(item.zone)}${item.asset_id?` · ${esc(item.asset_id)}`:''}${item.work_order_number?` · ${esc(item.work_order_number)}`:''}
-      ${item.reference_standard?`<span class="text-accent"> · 📖 ${esc(item.reference_standard)}</span>`:''}
+      ${esc(item.site_name)} · ${esc(item.zone)}${item.asset_id?` · ${esc(item.asset_id)}`:''}${item.work_order_number?` · ${esc(item.work_order_number)}`:''}
+      ${item.reference_standard?`<span class="text-accent"> · ${esc(item.reference_standard)}</span>`:''}
     </div>
     <div class="flex gap-6">
-      <button class="btn btn-ok btn-sm" onclick="openModal('${item.workflow_item_id}','${escJ(item.action_description)}',true)">✓ Approve</button>
-      <button class="btn btn-err btn-sm" onclick="openModal('${item.workflow_item_id}','${escJ(item.action_description)}',false)">✕ Reject</button>
+      <button class="btn btn-ok btn-sm" onclick="openModal('${item.workflow_item_id}','${escJ(item.action_description)}',true)">Approve</button>
+      <button class="btn btn-err btn-sm" onclick="openModal('${item.workflow_item_id}','${escJ(item.action_description)}',false)">Reject</button>
     </div>
   </div>`;
 }
@@ -727,7 +686,7 @@ function renderStatusDetail(d){
     ${imgNames.length?`
     <div class="card" style="padding:10px;margin-bottom:8px">
       <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">
-        📷 Images Captured (${imgNames.length})
+        Images Captured (${imgNames.length})
       </div>
       <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
         ${imgNames.map(fname=>`
@@ -793,7 +752,7 @@ async function renderHistory(){
       <div class="section-title" style="margin:0">Patrol History <span style="font-weight:400;color:var(--text3)">(${_historyData.length})</span></div>
       <div class="flex gap-6">
         <input class="inp" id="hist-filter" placeholder="Filter…" oninput="filterHist()" style="width:140px;padding:3px 8px"/>
-        <button class="btn btn-ghost btn-sm" onclick="renderHistory()">↻</button>
+        <button class="btn btn-ghost btn-sm" onclick="renderHistory()">Refresh</button>
       </div>
     </div>
     <div class="card" style="overflow:hidden" id="hist-table">${histTable(_historyData)}</div>
@@ -801,7 +760,7 @@ async function renderHistory(){
 }
 
 function histTable(data){
-  if(!data.length)return`<div class="empty-state"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="12 8 12 12 14 14"/><path d="M3.1 11a9 9 0 1 0 .4-3.5"/><polyline points="3 3 3 9 9 9"/></svg>No history</div>`;
+  if(!data.length)return`<div class="empty-state">No history</div>`;
   return`<table>
     <thead><tr><th>Run ID</th><th>Work Order</th><th>Location</th><th>Sev.</th><th>Progress</th><th>Time</th><th></th></tr></thead>
     <tbody>${data.map(r=>`<tr>
@@ -811,7 +770,7 @@ function histTable(data){
       <td>${sevBadge(r.overall_severity)}</td>
       <td style="min-width:70px"><div class="prog-bar"><div class="prog-fill" style="width:${r.total_actions>0?Math.round(r.completed_actions/r.total_actions*100):0}%"></div></div><div style="font-size:9px;color:var(--text3);margin-top:1px">${r.completed_actions}/${r.total_actions}</div></td>
       <td style="font-size:9px;color:var(--text3);white-space:nowrap">${fmt(r.captured_at)}</td>
-      <td><button class="btn btn-ghost btn-sm" onclick="lookupRun('${r.run_id}')">→</button></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="lookupRun('${r.run_id}')">View</button></td>
     </tr>`).join('')}</tbody>
   </table>`;
 }
@@ -895,7 +854,7 @@ function addMsg(text,role,temp=false){
     const body=temp
       ?'<div class="spinner" style="margin:2px 0"></div>'
       :`<div class="md">${marked.parse(text)}</div>`;
-    d.innerHTML=`<div class="msg-ai-label"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>AI Coworker</div>${body}`;
+    d.innerHTML=`<div class="msg-ai-label">AI Coworker</div>${body}`;
   }
   box.appendChild(d);
   box.scrollTop=box.scrollHeight;

@@ -44,6 +44,13 @@ app.include_router(xmpro.router, prefix=API_PREFIX)
 async def startup():
     create_tables()
     ensure_collections()
+    _init_mlflow()
+
+
+def _init_mlflow() -> None:
+    import mlflow
+    mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
+    mlflow.set_experiment(settings.MLFLOW_EXPERIMENT_NAME)
 
 
 _FRONTEND = Path(__file__).parent.parent / "frontend"

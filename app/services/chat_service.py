@@ -2,7 +2,9 @@
 Mode 1 – AI coworker chat orchestration.
 Runs the Claude agent loop with CMMS + calculation + standards tools.
 """
+import time
 import anthropic
+import mlflow
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -14,11 +16,18 @@ from app.tools.calculations import CALC_TOOL_EXECUTORS
 
 _client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
+# claude-sonnet-4-6 pricing (USD per token)
+_INPUT_COST_PER_TOKEN  = 3.00  / 1_000_000   # $3.00 / MTok
+_OUTPUT_COST_PER_TOKEN = 15.00 / 1_000_000   # $15.00 / MTok
+
 CHAT_SYSTEM_PROMPT = """You are an AI coworker assistant for facilities and maintenance teams in Singapore.
 You have access to the CMMS database, past work orders, Singapore engineering standards,
 and OEM equipment manuals. Answer questions clearly and cite sources where possible.
 Always use the available tools to look up live data — do not make up figures.
-When referencing standards and manuals, quote the clause number if available."""
+When referencing standards and manuals, quote the clause number if available.
+When returning work order information, always state the data_source field so the user
+knows whether the record came from v_inspection_tasks or spot_work_orders.
+When returning inspection tasks, always include the source field value exactly as stored."""
 
 
 def run_chat(request: ChatRequest, db: Session) -> ChatResponse:
@@ -34,6 +43,9 @@ def run_chat(request: ChatRequest, db: Session) -> ChatResponse:
 
     tool_calls_log: list[ToolCallRecord] = []
     sources: list[str] = []
+    total_input_tokens = 0
+    total_output_tokens = 0
+    start_time = time.time()
 
     # Agentic loop
     while True:
@@ -45,9 +57,22 @@ def run_chat(request: ChatRequest, db: Session) -> ChatResponse:
             messages=messages,
         )
 
+        # Accumulate tokens across every loop iteration
+        if response.usage:
+            total_input_tokens  += response.usage.input_tokens
+            total_output_tokens += response.usage.output_tokens
+
         if response.stop_reason == "end_turn":
             answer = next(
                 (b.text for b in response.content if hasattr(b, "text")), ""
+            )
+            _log_trace(
+                query=request.message,
+                session_id=request.session_id or "",
+                input_tokens=total_input_tokens,
+                output_tokens=total_output_tokens,
+                num_tool_calls=len(tool_calls_log),
+                latency=time.time() - start_time,
             )
             return ChatResponse(
                 session_id=request.session_id,
@@ -80,11 +105,49 @@ def run_chat(request: ChatRequest, db: Session) -> ChatResponse:
         else:
             break
 
+    _log_trace(
+        query=request.message,
+        session_id=request.session_id or "",
+        input_tokens=total_input_tokens,
+        output_tokens=total_output_tokens,
+        num_tool_calls=len(tool_calls_log),
+        latency=time.time() - start_time,
+    )
     return ChatResponse(
         session_id=request.session_id,
         answer="I was unable to complete the request.",
         tool_calls=tool_calls_log,
     )
+
+
+def _log_trace(
+    query: str,
+    session_id: str,
+    input_tokens: int,
+    output_tokens: int,
+    num_tool_calls: int,
+    latency: float,
+) -> None:
+    """Log one MLflow run per chat query. Never raises — tracing must not break chat."""
+    try:
+        cost = (input_tokens * _INPUT_COST_PER_TOKEN) + (output_tokens * _OUTPUT_COST_PER_TOKEN)
+        with mlflow.start_run(run_name="chat_query"):
+            mlflow.set_tags({
+                "model": settings.CLAUDE_MODEL,
+                "session_id": session_id,
+                "type": "chat_query",
+            })
+            mlflow.log_param("query", query[:500])
+            mlflow.log_metrics({
+                "input_tokens":       input_tokens,
+                "output_tokens":      output_tokens,
+                "total_tokens":       input_tokens + output_tokens,
+                "estimated_cost_usd": round(cost, 6),
+                "num_tool_calls":     num_tool_calls,
+                "latency_seconds":    round(latency, 3),
+            })
+    except Exception:
+        pass
 
 
 def _execute_tool(tool_name: str, tool_input: dict, db: Session):

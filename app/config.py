@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     QDRANT_COLLECTION_INCIDENTS: str = "historical_incidents"
     QDRANT_COLLECTION_STANDARDS: str = "singapore_standards"
     QDRANT_COLLECTION_MANUALS: str = "oem_manuals"
+    QDRANT_COLLECTION_INSPECTION_TASKS: str = "inspection_tasks"
 
     # Embedding model (sentence-transformers)
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
@@ -50,6 +51,10 @@ class Settings(BaseSettings):
     # Image Storage
     IMAGE_UPLOAD_DIR: str = "./app/images"
     MAX_IMAGE_SIZE_MB: int = 10
+
+    # MLflow Tracing
+    MLFLOW_TRACKING_URI: str = "http://localhost:5001"
+    MLFLOW_EXPERIMENT_NAME: str = "ai-coworker"
 
     # Business Logic Thresholds
     HIGH_SEVERITY_COST_THRESHOLD: float = 5000.0

@@ -8,7 +8,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
 
-from app.models.db_models import WorkOrder, Asset
+from app.models.db_models import WorkOrder, Asset, InspectionTask
 
 
 # ---------------------------------------------------------------------------
@@ -44,6 +44,30 @@ TOOL_GET_WORK_ORDERS = {
 }
 
 
+def _inspection_task_to_dict(r: InspectionTask) -> dict:
+    return {
+        "work_order_number": r.workorder_no,
+        "task_no": r.task_no,
+        "asset_id": r.asset_id,
+        "robot_id": r.robot_id,
+        "category": r.category,
+        "frequency": r.frequency,
+        "task_type_name": r.TaskTypeName,
+        "permit_no": r.permit_no,
+        "schedule_date": r.schedule_date,
+        "scheduled_time": r.scheduled_time,
+        "status": r.status,
+        "created_by": r.created_by,
+        "created_time": r.created_time.isoformat() if r.created_time else None,
+        "inspection_data": r.inspection_data,
+        "inspection_report": r.inspection_report,
+        "image_id": r.imageId,
+        "notes": r.Notes,
+        "source": r.source,
+        "data_source": "v_inspection_tasks",
+    }
+
+
 def execute_get_work_orders(db: Session, params: dict) -> list[dict]:
     filters = []
     if params.get("asset_id"):
@@ -69,23 +93,96 @@ def execute_get_work_orders(db: Session, params: dict) -> list[dict]:
         .limit(limit)
         .all()
     )
-    return [
-        {
-            "work_order_number": r.work_order_number,
-            "title": r.title,
-            "asset_id": r.asset_id,
-            "site": r.site,
-            "zone": r.zone,
-            "status": r.status,
-            "priority": r.priority,
-            "assigned_to": r.assigned_to,
-            "created_at": r.created_at.isoformat() if r.created_at else None,
-            "completed_at": r.completed_at.isoformat() if r.completed_at else None,
-            "cost": r.cost,
-            "failure_code": r.failure_code,
-        }
-        for r in rows
-    ]
+
+    # For any WO numbers also present in v_inspection_tasks, prefer the view's data
+    wo_numbers = [r.work_order_number for r in rows]
+    view_map: dict[str, InspectionTask] = {}
+    if wo_numbers:
+        view_rows = (
+            db.query(InspectionTask)
+            .filter(InspectionTask.workorder_no.in_(wo_numbers))
+            .all()
+        )
+        view_map = {r.workorder_no: r for r in view_rows}
+
+    results = []
+    for r in rows:
+        if r.work_order_number in view_map:
+            results.append(_inspection_task_to_dict(view_map[r.work_order_number]))
+        else:
+            results.append({
+                "work_order_number": r.work_order_number,
+                "title": r.title,
+                "asset_id": r.asset_id,
+                "site": r.site,
+                "zone": r.zone,
+                "status": r.status,
+                "priority": r.priority,
+                "assigned_to": r.assigned_to,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "completed_at": r.completed_at.isoformat() if r.completed_at else None,
+                "cost": r.cost,
+                "failure_code": r.failure_code,
+                "data_source": "spot_work_orders",
+            })
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Tool: get_inspection_tasks
+# ---------------------------------------------------------------------------
+
+TOOL_GET_INSPECTION_TASKS = {
+    "name": "get_inspection_tasks",
+    "description": (
+        "Query dbo.v_inspection_tasks for scheduled or completed inspection tasks. "
+        "Each row links to a work order via workorder_no and contains the full "
+        "inspection_data (form fields/results), robot used, asset, schedule, status, "
+        "and who created it. The 'source' field indicates what triggered the task "
+        "('AI Agent', 'Job Scheduler', or 'Others'). Always show the source value as-is."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "workorder_no": {"type": "string", "description": "Filter by exact work order number, e.g. WO-2026-001"},
+            "asset_id": {"type": "string", "description": "Filter by asset ID (partial match)"},
+            "robot_id": {"type": "string", "description": "Filter by robot ID (partial match)"},
+            "status": {"type": "string", "description": "Filter by status, e.g. Completed, Pending"},
+            "created_by": {"type": "string", "description": "Filter by inspector/creator name (partial match)"},
+            "source": {
+                "type": "string",
+                "description": "Filter by task origin: 'AI Agent', 'Job Scheduler', or 'Others'",
+            },
+            "limit": {"type": "integer", "default": 20},
+        },
+    },
+}
+
+
+def execute_get_inspection_tasks(db: Session, params: dict) -> list[dict]:
+    filters = []
+    if params.get("workorder_no"):
+        filters.append(InspectionTask.workorder_no == params["workorder_no"])
+    if params.get("asset_id"):
+        filters.append(InspectionTask.asset_id.ilike(f"%{params['asset_id']}%"))
+    if params.get("robot_id"):
+        filters.append(InspectionTask.robot_id.ilike(f"%{params['robot_id']}%"))
+    if params.get("status"):
+        filters.append(InspectionTask.status.ilike(f"%{params['status']}%"))
+    if params.get("created_by"):
+        filters.append(InspectionTask.created_by.ilike(f"%{params['created_by']}%"))
+    if params.get("source"):
+        filters.append(InspectionTask.source.ilike(f"%{params['source']}%"))
+
+    limit = min(int(params.get("limit", 20)), 100)
+    rows = (
+        db.query(InspectionTask)
+        .filter(and_(*filters) if filters else True)
+        .order_by(InspectionTask.created_time.desc())
+        .limit(limit)
+        .all()
+    )
+    return [_inspection_task_to_dict(r) for r in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -139,9 +236,10 @@ def execute_get_asset_info(db: Session, params: dict) -> dict:
 # Registry
 # ---------------------------------------------------------------------------
 
-ALL_CMMS_TOOLS = [TOOL_GET_WORK_ORDERS, TOOL_GET_ASSET_INFO]
+ALL_CMMS_TOOLS = [TOOL_GET_WORK_ORDERS, TOOL_GET_INSPECTION_TASKS, TOOL_GET_ASSET_INFO]
 
 CMMS_TOOL_EXECUTORS = {
     "get_work_orders": execute_get_work_orders,
+    "get_inspection_tasks": execute_get_inspection_tasks,
     "get_asset_info": execute_get_asset_info,
 }

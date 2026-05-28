@@ -30,6 +30,7 @@ def ensure_collections() -> None:
         settings.QDRANT_COLLECTION_INCIDENTS: "Historical inspection incidents",
         settings.QDRANT_COLLECTION_STANDARDS: "Singapore engineering standards",
         settings.QDRANT_COLLECTION_MANUALS: "OEM equipment manuals",
+        settings.QDRANT_COLLECTION_INSPECTION_TASKS: "Inspection tasks from v_inspection_tasks",
     }
     existing = {c.name for c in client.get_collections().collections}
     for name in collections:

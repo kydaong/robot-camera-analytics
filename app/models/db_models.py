@@ -15,6 +15,11 @@ class Base(DeclarativeBase):
     pass
 
 
+class ViewBase(DeclarativeBase):
+    """Separate base for read-only view mappings — excluded from create_all."""
+    pass
+
+
 class WorkOrder(Base):
     __tablename__ = "spot_work_orders"
 
@@ -89,3 +94,31 @@ class WorkflowItem(Base):
     completed_at = Column(DateTime, nullable=True)
 
     inspection_run = relationship("InspectionRun", back_populates="workflow_items")
+
+
+class InspectionTask(ViewBase):
+    """Read-only ORM mapping for dbo.v_inspection_tasks (SQL view)."""
+    __tablename__ = "v_inspection_tasks"
+    __table_args__ = {"schema": "dbo"}
+
+    Id = Column(Integer, primary_key=True)
+    task_no = Column(String(100))
+    workorder_no = Column(String(50), index=True)
+    category = Column(String(100))
+    frequency = Column(String(100))
+    TaskType = Column(Integer)
+    TaskTypeName = Column(String(100))
+    permit_no = Column(Integer)
+    robot_id = Column(String(50))
+    asset_id = Column(String(100))
+    schedule_date = Column(String(50))
+    scheduled_time = Column(String(50))
+    cancel_flag = Column(Boolean)
+    created_time = Column(DateTime)
+    status = Column(String(50))
+    inspection_data = Column(Text)
+    inspection_report = Column(Text)
+    created_by = Column(String(100))
+    imageId = Column(String(100))
+    Notes = Column(Text)
+    source = Column(String(255))
